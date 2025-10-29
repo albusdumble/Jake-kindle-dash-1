@@ -11,7 +11,7 @@
     background-color: #fff;
     color: #000;
     font-family: Georgia, serif;
-    font-size: 20px; /* base font size */
+    font-size: 20px;
     display: flex;
     justify-content: center;
   }
@@ -21,7 +21,7 @@
     grid-template-columns: 1fr;
     grid-template-rows: repeat(4, auto);
     gap: 8px;
-    width: 600px; /* fixed width, no horizontal scroll */
+    width: 600px;
     padding: 10px;
     box-sizing: border-box;
   }
@@ -36,7 +36,7 @@
 
   h2 {
     margin: 0 0 6px 0;
-    font-size: 1.15em; /* ~85% of base font */
+    font-size: 1.15em;
     border-bottom: 1px solid #000;
     padding-bottom: 6px;
     display: flex;
@@ -98,12 +98,7 @@
       <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" stroke="black" fill="none" stroke-width="2"/><line x1="3" y1="10" x2="21" y2="10" stroke="black"/></svg>
       Calendar
     </h2>
-    <ul>
-      <li>Oct 29 – Grocery pickup</li>
-      <li>Oct 30 – Dinner w/ family</li>
-      <li>Oct 31 – Trick or Treat</li>
-      <li>Nov 1 – Church activity</li>
-    </ul>
+    <ul></ul>
   </div>
 
   <!-- Weather -->
@@ -147,6 +142,59 @@
 </div>
 
 <script>
+  // --- Calendar: fetch next 4 events from iCloud ICS ---
+  var calendarUrl = "https://p157-caldav.icloud.com/published/2/MjAzMDk4MjAyNTcyMDMwOWelqCDmoGrZl0HbDRwh4THxwVTjex_ugi0QuWfxMzqeyjBGGFltleGeYl57ChEM7SaryzOAF7EjZcsTepi0Pwg"; // replace with your iCloud public ICS URL
+
+  function fetchCalendar(url) {
+    var xhr = new XMLHttpRequest();
+    xhr.open("GET", url);
+    xhr.onload = function() {
+      if (xhr.status === 200) {
+        var icsText = xhr.responseText;
+        var events = parseICS(icsText);
+        displayNextEvents(events, 4);
+      } else {
+        document.querySelector("#calendar ul").innerHTML = "<li>Unable to load calendar.</li>";
+      }
+    };
+    xhr.onerror = function() {
+      document.querySelector("#calendar ul").innerHTML = "<li>Offline.</li>";
+    };
+    xhr.send();
+  }
+
+  function parseICS(icsText) {
+    var events = [];
+    var lines = icsText.split(/\r?\n/);
+    var currentEvent = {};
+    lines.forEach(line => {
+      if (line.startsWith("BEGIN:VEVENT")) currentEvent = {};
+      if (line.startsWith("SUMMARY:")) currentEvent.summary = line.replace("SUMMARY:", "");
+      if (line.startsWith("DTSTART")) {
+        var dtStr = line.split(":")[1];
+        currentEvent.date = new Date(dtStr.slice(0,4)+'-'+dtStr.slice(4,6)+'-'+dtStr.slice(6,8)+'T'+dtStr.slice(9,11)+':'+dtStr.slice(11,13));
+      }
+      if (line.startsWith("END:VEVENT")) {
+        if(currentEvent.date && currentEvent.summary) events.push(currentEvent);
+      }
+    });
+    return events.sort((a,b)=>a.date-b.date);
+  }
+
+  function displayNextEvents(events, count) {
+    var now = new Date();
+    var upcoming = events.filter(e => e.date >= now).slice(0, count);
+    var ul = document.querySelector("#calendar ul");
+    ul.innerHTML = "";
+    upcoming.forEach(ev => {
+      var li = document.createElement("li");
+      li.textContent = ev.date.toLocaleDateString() + " – " + ev.summary;
+      ul.appendChild(li);
+    });
+  }
+
+  fetchCalendar(calendarUrl);
+
   // --- Weather ---
   function updateWeather() {
     var xhr = new XMLHttpRequest();
@@ -163,7 +211,7 @@
 
           var weatherHtml = "";
           weatherHtml += "<div class='weather-line'>Now: " + tempNow + "°F, " + wind + " mph wind</div>";
-          weatherHtml += "<div class='weather-line'>Tomorrow: " + tomorrowTemp + "°F" + (rainProb > 0 ? ", " + rainProb + "% rain" : "") + "</div>";
+          weatherHtml += "<div class='weather-line'>Tomorrow: " + tomorrowTemp + "°F" + (rainProb>0 ? ", " + rainProb + "% rain" : "") + "</div>";
           document.getElementById("weather-content").innerHTML = weatherHtml;
         } catch(e) {
           document.getElementById("weather-content").innerText = "Error parsing weather.";
