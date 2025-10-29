@@ -36,7 +36,7 @@
 
   h2 {
     margin: 0 0 6px 0;
-    font-size: 1.15em;
+    font-size: 1.15em; /* header slightly smaller */
     border-bottom: 1px solid #000;
     padding-bottom: 6px;
     display: flex;
@@ -47,6 +47,9 @@
     width: 24px;
     height: 24px;
     margin-right: 6px;
+    fill: none;
+    stroke: black;
+    stroke-width: 2;
   }
 
   ul {
@@ -95,7 +98,7 @@
   <!-- Calendar -->
   <div class="module" id="calendar">
     <h2>
-      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" stroke="black" fill="none" stroke-width="2"/><line x1="3" y1="10" x2="21" y2="10" stroke="black"/></svg>
+      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
       Calendar
     </h2>
     <ul></ul>
@@ -105,8 +108,7 @@
   <div class="module" id="weather">
     <h2>
       <svg viewBox="0 0 24 24">
-        <circle cx="12" cy="12" r="5" stroke="black" fill="none" stroke-width="2"/>
-        <ellipse cx="16" cy="14" rx="6" ry="4" stroke="black" fill="none" stroke-width="2"/>
+        <circle cx="12" cy="12" r="5"/><ellipse cx="16" cy="14" rx="6" ry="4"/>
       </svg>
       Weather
     </h2>
@@ -125,7 +127,7 @@
   <!-- To-Dos -->
   <div class="module" id="todos">
     <h2>
-      <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12" stroke="black" fill="none" stroke-width="2"/></svg>
+      <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
       To-Dos
     </h2>
     <ul id="todo-list"></ul>
@@ -142,15 +144,16 @@
 </div>
 
 <script>
-  // --- Calendar: fetch next 4 events from iCloud ICS ---
-  var calendarUrl = "https://p157-caldav.icloud.com/published/2/MjAzMDk4MjAyNTcyMDMwOWelqCDmoGrZl0HbDRwh4THxwVTjex_ugi0QuWfxMzqeyjBGGFltleGeYl57ChEM7SaryzOAF7EjZcsTepi0Pwg"; // replace with your iCloud public ICS URL
+  // --- Calendar using CORS proxy ---
+  var icsUrl = "https://p157-caldav.icloud.com/published/2/MjAzMDk4MjAyNTcyMDMwOWelqCDmoGrZl0HbDRwh4THxwVTjex_ugi0QuWfxMzqeyjBGGFltleGeYl57ChEM7SaryzOAF7EjZcsTepi0Pwg";
+  var proxyUrl = "https://api.allorigins.win/get?url=" + encodeURIComponent(icsUrl);
 
-  function fetchCalendar(url) {
+  function fetchCalendar() {
     var xhr = new XMLHttpRequest();
-    xhr.open("GET", url);
+    xhr.open("GET", proxyUrl);
     xhr.onload = function() {
-      if (xhr.status === 200) {
-        var icsText = xhr.responseText;
+      if(xhr.status===200){
+        var icsText = JSON.parse(xhr.responseText).contents;
         var events = parseICS(icsText);
         displayNextEvents(events, 4);
       } else {
@@ -163,125 +166,102 @@
     xhr.send();
   }
 
-  function parseICS(icsText) {
-    var events = [];
-    var lines = icsText.split(/\r?\n/);
-    var currentEvent = {};
-    lines.forEach(line => {
-      if (line.startsWith("BEGIN:VEVENT")) currentEvent = {};
-      if (line.startsWith("SUMMARY:")) currentEvent.summary = line.replace("SUMMARY:", "");
-      if (line.startsWith("DTSTART")) {
-        var dtStr = line.split(":")[1];
-        currentEvent.date = new Date(dtStr.slice(0,4)+'-'+dtStr.slice(4,6)+'-'+dtStr.slice(6,8)+'T'+dtStr.slice(9,11)+':'+dtStr.slice(11,13));
+  function parseICS(icsText){
+    var events=[], lines=icsText.split(/\r?\n/), current={};
+    lines.forEach(line=>{
+      if(line.startsWith("BEGIN:VEVENT")) current={};
+      if(line.startsWith("SUMMARY:")) current.summary=line.replace("SUMMARY:","");
+      if(line.startsWith("DTSTART")){
+        var dt=line.split(":")[1];
+        current.date=new Date(dt.slice(0,4)+'-'+dt.slice(4,6)+'-'+dt.slice(6,8)+'T'+dt.slice(9,11)+':'+dt.slice(11,13));
       }
-      if (line.startsWith("END:VEVENT")) {
-        if(currentEvent.date && currentEvent.summary) events.push(currentEvent);
-      }
+      if(line.startsWith("END:VEVENT") && current.date && current.summary) events.push(current);
     });
     return events.sort((a,b)=>a.date-b.date);
   }
 
-  function displayNextEvents(events, count) {
-    var now = new Date();
-    var upcoming = events.filter(e => e.date >= now).slice(0, count);
-    var ul = document.querySelector("#calendar ul");
-    ul.innerHTML = "";
-    upcoming.forEach(ev => {
-      var li = document.createElement("li");
-      li.textContent = ev.date.toLocaleDateString() + " – " + ev.summary;
+  function displayNextEvents(events,count){
+    var now=new Date();
+    var upcoming=events.filter(e=>e.date>=now).slice(0,count);
+    var ul=document.querySelector("#calendar ul"); ul.innerHTML="";
+    upcoming.forEach(ev=>{
+      var li=document.createElement("li");
+      li.textContent=ev.date.toLocaleDateString()+" – "+ev.summary;
       ul.appendChild(li);
     });
   }
 
-  fetchCalendar(calendarUrl);
+  fetchCalendar();
 
   // --- Weather ---
-  function updateWeather() {
-    var xhr = new XMLHttpRequest();
-    xhr.open("GET", "https://api.open-meteo.com/v1/forecast?latitude=33.285&longitude=-96.5717&current_weather=true&daily=temperature_2m_max,precipitation_probability_max&temperature_unit=fahrenheit&windspeed_unit=mph&timezone=auto");
-    xhr.onload = function() {
-      if (xhr.status === 200) {
-        try {
-          var data = JSON.parse(xhr.responseText);
-          var current = data.current_weather;
-          var tempNow = Math.round(current.temperature);
-          var wind = Math.round(current.windspeed);
-          var tomorrowTemp = Math.round(data.daily.temperature_2m_max[1]);
-          var rainProb = data.daily.precipitation_probability_max[1] || 0;
-
-          var weatherHtml = "";
-          weatherHtml += "<div class='weather-line'>Now: " + tempNow + "°F, " + wind + " mph wind</div>";
-          weatherHtml += "<div class='weather-line'>Tomorrow: " + tomorrowTemp + "°F" + (rainProb>0 ? ", " + rainProb + "% rain" : "") + "</div>";
-          document.getElementById("weather-content").innerHTML = weatherHtml;
-        } catch(e) {
-          document.getElementById("weather-content").innerText = "Error parsing weather.";
+  function updateWeather(){
+    var xhr=new XMLHttpRequest();
+    xhr.open("GET","https://api.open-meteo.com/v1/forecast?latitude=33.285&longitude=-96.5717&current_weather=true&daily=temperature_2m_max,precipitation_probability_max&temperature_unit=fahrenheit&windspeed_unit=mph&timezone=auto");
+    xhr.onload=function(){
+      if(xhr.status===200){
+        try{
+          var data=JSON.parse(xhr.responseText);
+          var current=data.current_weather;
+          var tempNow=Math.round(current.temperature);
+          var wind=Math.round(current.windspeed);
+          var tomorrowTemp=Math.round(data.daily.temperature_2m_max[1]);
+          var rain=data.daily.precipitation_probability_max[1]||0;
+          var html="";
+          html+="<div class='weather-line'>Now: "+tempNow+"°F, "+wind+" mph wind</div>";
+          html+="<div class='weather-line'>Tomorrow: "+tomorrowTemp+"°F"+(rain>0?", "+rain+"% rain":"")+"</div>";
+          document.getElementById("weather-content").innerHTML=html;
+        }catch(e){
+          document.getElementById("weather-content").innerText="Error parsing weather.";
         }
-      } else {
-        document.getElementById("weather-content").innerText = "No data.";
-      }
+      } else { document.getElementById("weather-content").innerText="No data."; }
     };
-    xhr.onerror = function() {
-      document.getElementById("weather-content").innerText = "Offline.";
-    };
+    xhr.onerror=function(){document.getElementById("weather-content").innerText="Offline.";}
     xhr.send();
   }
   updateWeather();
 
   // --- To-Dos ---
-  function loadTodos() {
-    var todos = JSON.parse(localStorage.getItem("todos") || "[]");
-    var done = JSON.parse(localStorage.getItem("done") || "[]");
-    var list = document.getElementById("todo-list");
-    var doneList = document.getElementById("done-list");
-    list.innerHTML = "";
-    doneList.innerHTML = "";
-
-    for (var i=0;i<todos.length;i++){
-      var li = document.createElement("li");
-      li.innerHTML = "<input type='checkbox' data-idx='"+i+"' onclick='markDone(this)'>"+todos[i].text;
+  function loadTodos(){
+    var todos=JSON.parse(localStorage.getItem("todos")||"[]");
+    var done=JSON.parse(localStorage.getItem("done")||"[]");
+    var list=document.getElementById("todo-list");
+    var doneList=document.getElementById("done-list");
+    list.innerHTML=""; doneList.innerHTML="";
+    for(var i=0;i<todos.length;i++){
+      var li=document.createElement("li");
+      li.innerHTML="<input type='checkbox' data-idx='"+i+"' onclick='markDone(this)'>"+todos[i].text;
       list.appendChild(li);
     }
-    for (var i=0;i<done.length;i++){
-      var li = document.createElement("li");
-      li.innerHTML = "<input type='checkbox' checked data-idx='"+i+"' onclick='unmarkDone(this)'>"+done[i].text;
+    for(var i=0;i<done.length;i++){
+      var li=document.createElement("li");
+      li.innerHTML="<input type='checkbox' checked data-idx='"+i+"' onclick='unmarkDone(this)'>"+done[i].text;
       doneList.appendChild(li);
     }
   }
 
-  function saveTodos(todos, done){
-    localStorage.setItem("todos", JSON.stringify(todos));
-    localStorage.setItem("done", JSON.stringify(done));
+  function saveTodos(todos,done){
+    localStorage.setItem("todos",JSON.stringify(todos));
+    localStorage.setItem("done",JSON.stringify(done));
   }
 
   function addTodo(){
-    var input=document.getElementById("new-todo");
-    var val=input.value.trim();
-    if(!val) return;
-    var todos=JSON.parse(localStorage.getItem("todos")||"[]");
-    todos.push({text:val});
-    localStorage.setItem("todos", JSON.stringify(todos));
-    input.value="";
-    loadTodos();
+    var input=document.getElementById("new-todo"); var val=input.value.trim(); if(!val) return;
+    var todos=JSON.parse(localStorage.getItem("todos")||"[]"); todos.push({text:val});
+    localStorage.setItem("todos",JSON.stringify(todos)); input.value=""; loadTodos();
   }
 
   function markDone(cb){
     var idx=parseInt(cb.getAttribute("data-idx"));
     var todos=JSON.parse(localStorage.getItem("todos")||"[]");
     var done=JSON.parse(localStorage.getItem("done")||"[]");
-    done.push(todos[idx]);
-    todos.splice(idx,1);
-    saveTodos(todos,done);
-    loadTodos();
+    done.push(todos[idx]); todos.splice(idx,1); saveTodos(todos,done); loadTodos();
   }
 
   function unmarkDone(cb){
     var idx=parseInt(cb.getAttribute("data-idx"));
     var todos=JSON.parse(localStorage.getItem("todos")||"[]");
     var done=JSON.parse(localStorage.getItem("done")||"[]");
-    todos.push(done[idx]);
-    done.splice(idx,1);
-    saveTodos(todos,done);
-    loadTodos();
+    todos.push(done[idx]); done.splice(idx,1); saveTodos(todos,done); loadTodos();
   }
 
   function clearDone(){
