@@ -11,7 +11,7 @@
     background-color: #fff;
     color: #000;
     font-family: Georgia, serif;
-    font-size: 19px;
+    font-size: 20px; /* base font size */
     display: flex;
     justify-content: center;
   }
@@ -21,7 +21,7 @@
     grid-template-columns: 1fr;
     grid-template-rows: repeat(4, auto);
     gap: 8px;
-    width: 600px; /* fixed width */
+    width: 600px; /* fixed width, no horizontal scroll */
     padding: 10px;
     box-sizing: border-box;
   }
@@ -36,7 +36,7 @@
 
   h2 {
     margin: 0 0 6px 0;
-    font-size: 1.4em;
+    font-size: 1.15em; /* ~85% of base font */
     border-bottom: 1px solid #000;
     padding-bottom: 6px;
     display: flex;
@@ -109,8 +109,11 @@
   <!-- Weather -->
   <div class="module" id="weather">
     <h2>
-      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5" stroke="black" fill="none" stroke-width="2"/></svg>
-      Weather (Melissa, TX)
+      <svg viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="5" stroke="black" fill="none" stroke-width="2"/>
+        <ellipse cx="16" cy="14" rx="6" ry="4" stroke="black" fill="none" stroke-width="2"/>
+      </svg>
+      Weather
     </h2>
     <div id="weather-content">Loading weather...</div>
   </div>
@@ -147,16 +150,21 @@
   // --- Weather ---
   function updateWeather() {
     var xhr = new XMLHttpRequest();
-    xhr.open("GET", "https://api.open-meteo.com/v1/forecast?latitude=33.285&longitude=-96.5717&current_weather=true&temperature_unit=fahrenheit&windspeed_unit=mph");
+    xhr.open("GET", "https://api.open-meteo.com/v1/forecast?latitude=33.285&longitude=-96.5717&current_weather=true&daily=temperature_2m_max,precipitation_probability_max&temperature_unit=fahrenheit&windspeed_unit=mph&timezone=auto");
     xhr.onload = function() {
       if (xhr.status === 200) {
         try {
           var data = JSON.parse(xhr.responseText);
-          var w = data.current_weather;
-          var temp = Math.round(w.temperature);
-          var wind = Math.round(w.windspeed);
-          var weatherLine = "Now: " + temp + "°F, " + wind + " mph wind";
-          document.getElementById("weather-content").innerText = weatherLine;
+          var current = data.current_weather;
+          var tempNow = Math.round(current.temperature);
+          var wind = Math.round(current.windspeed);
+          var tomorrowTemp = Math.round(data.daily.temperature_2m_max[1]);
+          var rainProb = data.daily.precipitation_probability_max[1] || 0;
+
+          var weatherHtml = "";
+          weatherHtml += "<div class='weather-line'>Now: " + tempNow + "°F, " + wind + " mph wind</div>";
+          weatherHtml += "<div class='weather-line'>Tomorrow: " + tomorrowTemp + "°F" + (rainProb > 0 ? ", " + rainProb + "% rain" : "") + "</div>";
+          document.getElementById("weather-content").innerHTML = weatherHtml;
         } catch(e) {
           document.getElementById("weather-content").innerText = "Error parsing weather.";
         }
