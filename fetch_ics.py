@@ -3,32 +3,25 @@ from icalendar import Calendar
 from datetime import datetime, timezone
 import json
 
-ICS_URL = "https://p157-caldav.icloud.com/published/2/MjAzMDk4MjAyNTcyMDMwOWelqCDmoGrZl0HbDRwh4THxwVTjex_ugi0QuWfxMzqeyjBGGFltleGeYl57ChEM7SaryzOAF7EjZcsTepi0Pwg"
-OUTPUT_FILE = "calendar.json"
-EVENT_COUNT = 4
+ics_url = "https://p157-caldav.icloud.com/published/2/MjAzMDk4MjAyNTcyMDMwOWelqCDmoGrZl0HbDRwh4THxwVTjex_ugi0QuWfxMzqeyjBGGFltleGeYl57ChEM7SaryzOAF7EjZcsTepi0Pwg"
 
-# Fetch ICS
-resp = requests.get(ICS_URL)
-resp.raise_for_status()
-cal = Calendar.from_ical(resp.text)
+response = requests.get(ics_url)
+response.raise_for_status()
 
-# Parse events
-events = []
+cal = Calendar.from_ical(response.text)
 now = datetime.now(timezone.utc)
+events = []
 
 for component in cal.walk():
     if component.name == "VEVENT":
-        start = component.get('dtstart').dt
-        summary = str(component.get('summary'))
-        if isinstance(start, datetime) and start >= now:
+        start = component.get("DTSTART").dt
+        summary = str(component.get("SUMMARY"))
+        if isinstance(start, datetime) and start > now:
             events.append({"date": start.isoformat(), "summary": summary})
 
-# Sort by date and take first N
-events.sort(key=lambda e: e["date"])
-events = events[:EVENT_COUNT]
+events = sorted(events, key=lambda e: e["date"])[:10]
 
-# Write JSON
-with open(OUTPUT_FILE, "w") as f:
+with open("calendar.json", "w") as f:
     json.dump(events, f, indent=2)
 
-print(f"Wrote {len(events)} upcoming events to {OUTPUT_FILE}")
+print(f"Wrote {len(events)} upcoming events to calendar.json")
