@@ -3,24 +3,24 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Jake's Dashboard</title>
+  <title>Jake's Kindle Dashboard</title>
   <style>
     html, body {
       margin: 0;
       padding: 0;
       background-color: #fff;
       color: #000;
-      font-family: "Georgia", serif;
+      font-family: Georgia, serif;
       width: 100%;
       height: 100%;
       overflow: hidden;
       font-size: 14px;
     }
 
-    /* Landscape simulation for Kindle if it ever supports transform */
+    /* Attempt rotation */
     body.rotated {
       transform: rotate(90deg);
-      transform-origin: left top;
+      transform-origin: top left;
       position: absolute;
       top: 0;
       left: 0;
@@ -37,6 +37,13 @@
       height: 100%;
       padding: 6px;
       box-sizing: border-box;
+    }
+
+    @media screen and (min-aspect-ratio: 1/1) {
+      .wrapper {
+        grid-template-columns: repeat(4, 1fr);
+        grid-template-rows: 1fr;
+      }
     }
 
     .module {
@@ -94,152 +101,140 @@
     .weather-line { margin: 3px 0; }
   </style>
 </head>
-<body>
-  <div class="wrapper">
-    <!-- Calendar -->
-    <div class="module" id="calendar">
-      <h2>📅 Calendar</h2>
-      <ul>
-        <li>Oct 29 – Grocery pickup</li>
-        <li>Oct 30 – Dinner w/ family</li>
-        <li>Oct 31 – Trick or Treat</li>
-        <li>Nov 1 – Church activity</li>
-      </ul>
-    </div>
+<body class="rotated">
 
-    <!-- Weather -->
-    <div class="module" id="weather">
-      <h2>🌤 Weather (Melissa, TX)</h2>
-      <div id="weather-content">Loading weather...</div>
-    </div>
-
-    <!-- Daily Quote -->
-    <div class="module" id="quote">
-      <h2>💬 Daily Quote</h2>
-      <p id="quote-text">“Do what you can, with what you have, where you are.” — Theodore Roosevelt</p>
-    </div>
-
-    <!-- To-Dos -->
-    <div class="module" id="todos">
-      <h2>✅ To-Dos</h2>
-      <ul id="todo-list"></ul>
-      <div>
-        <input id="new-todo" type="text" placeholder="Add task...">
-        <button id="add-todo">Add</button>
-      </div>
-      <div id="completed-list">
-        <strong>Completed:</strong>
-        <ul id="done-list"></ul>
-        <button id="clear-done">Clear Completed</button>
-      </div>
-    </div>
+<div class="wrapper">
+  <!-- Calendar -->
+  <div class="module" id="calendar">
+    <h2>📅 Calendar</h2>
+    <ul>
+      <li>Oct 29 – Grocery pickup</li>
+      <li>Oct 30 – Dinner w/ family</li>
+      <li>Oct 31 – Trick or Treat</li>
+      <li>Nov 1 – Church activity</li>
+    </ul>
   </div>
 
-  <script>
-    // --- Rotation test (try inline transform for Kindle)
-    document.body.classList.add("rotated");
+  <!-- Weather -->
+  <div class="module" id="weather">
+    <h2>🌤 Weather (Melissa, TX)</h2>
+    <div id="weather-content">Loading weather...</div>
+  </div>
 
-    // --- Weather ---
-    function updateWeather() {
-      var xhr = new XMLHttpRequest();
-      xhr.open("GET", "https://api.open-meteo.com/v1/forecast?latitude=33.285&longitude=-96.5717&current_weather=true&hourly=temperature_2m,precipitation_probability&temperature_unit=fahrenheit&windspeed_unit=mph");
-      xhr.onload = function() {
-        if (xhr.status === 200) {
+  <!-- Daily Quote -->
+  <div class="module" id="quote">
+    <h2>💬 Daily Quote</h2>
+    <p id="quote-text">“Do what you can, with what you have, where you are.” — Theodore Roosevelt</p>
+  </div>
+
+  <!-- To-Dos -->
+  <div class="module" id="todos">
+    <h2>✅ To-Dos</h2>
+    <ul id="todo-list"></ul>
+    <div>
+      <input id="new-todo" type="text" placeholder="Add task...">
+      <button onclick="addTodo()">Add</button>
+    </div>
+    <div id="completed-list">
+      <strong>Completed:</strong>
+      <ul id="done-list"></ul>
+      <button onclick="clearDone()">Clear Completed</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // --- Weather ---
+  function updateWeather() {
+    var xhr = new XMLHttpRequest();
+    xhr.open("GET", "https://api.open-meteo.com/v1/forecast?latitude=33.285&longitude=-96.5717&current_weather=true&temperature_unit=fahrenheit&windspeed_unit=mph");
+    xhr.onload = function() {
+      if (xhr.status === 200) {
+        try {
           var data = JSON.parse(xhr.responseText);
           var w = data.current_weather;
           var temp = Math.round(w.temperature);
           var wind = Math.round(w.windspeed);
-          var forecast = data.hourly.temperature_2m;
-          var timeIndex = data.hourly.time.findIndex(t => new Date(t) > new Date());
-          var upcomingTemps = forecast.slice(timeIndex, timeIndex + 4);
-          var maxTemp = Math.round(Math.max(...upcomingTemps));
-          var rainProb = data.hourly.precipitation_probability[timeIndex] || 0;
-          document.getElementById("weather-content").innerHTML = `
-            <div class='weather-line'>Now: ${temp}°F, ${wind} mph wind</div>
-            <div class='weather-line'>Forecast: ${maxTemp}°F high, ${rainProb}% rain</div>`;
-        } else {
-          document.getElementById("weather-content").innerText = "No data.";
+          var weatherLine = "Now: " + temp + "°F, " + wind + " mph wind";
+          document.getElementById("weather-content").innerText = weatherLine;
+        } catch(e) {
+          document.getElementById("weather-content").innerText = "Error parsing weather.";
         }
-      };
-      xhr.onerror = function() {
-        document.getElementById("weather-content").innerText = "Offline.";
-      };
-      xhr.send();
-    }
-    updateWeather();
+      } else {
+        document.getElementById("weather-content").innerText = "No data.";
+      }
+    };
+    xhr.onerror = function() {
+      document.getElementById("weather-content").innerText = "Offline.";
+    };
+    xhr.send();
+  }
+  updateWeather();
 
-    // --- To-Dos ---
+  // --- To-Dos ---
+  function loadTodos() {
+    var todos = JSON.parse(localStorage.getItem("todos") || "[]");
+    var done = JSON.parse(localStorage.getItem("done") || "[]");
     var list = document.getElementById("todo-list");
     var doneList = document.getElementById("done-list");
+    list.innerHTML = "";
+    doneList.innerHTML = "";
+
+    for (var i=0; i<todos.length; i++) {
+      var li = document.createElement("li");
+      li.innerHTML = "<input type='checkbox' data-idx='"+i+"' onclick='markDone(this)'>" + todos[i].text;
+      list.appendChild(li);
+    }
+    for (var i=0; i<done.length; i++) {
+      var li = document.createElement("li");
+      li.innerHTML = "<input type='checkbox' checked data-idx='"+i+"' onclick='unmarkDone(this)'>" + done[i].text;
+      doneList.appendChild(li);
+    }
+  }
+
+  function saveTodos(todos, done) {
+    localStorage.setItem("todos", JSON.stringify(todos));
+    localStorage.setItem("done", JSON.stringify(done));
+  }
+
+  function addTodo() {
     var input = document.getElementById("new-todo");
-    var addBtn = document.getElementById("add-todo");
-    var clearBtn = document.getElementById("clear-done");
-
-    function loadTodos() {
-      var todos = JSON.parse(localStorage.getItem("todos") || "[]");
-      var done = JSON.parse(localStorage.getItem("done") || "[]");
-      list.innerHTML = "";
-      doneList.innerHTML = "";
-
-      todos.forEach((t, i) => {
-        var li = document.createElement("li");
-        li.innerHTML = "<input type='checkbox' data-idx='" + i + "'>" + t.text;
-        list.appendChild(li);
-      });
-
-      done.forEach((t, i) => {
-        var li = document.createElement("li");
-        li.innerHTML = "<input type='checkbox' checked data-idx='" + i + "'>" + t.text;
-        doneList.appendChild(li);
-      });
-    }
-
-    function saveTodos() {
-      var todos = [];
-      var done = [];
-      list.querySelectorAll("li").forEach(li => {
-        var cb = li.querySelector("input");
-        todos.push({ text: cb.nextSibling.textContent, done: false });
-      });
-      doneList.querySelectorAll("li").forEach(li => {
-        var cb = li.querySelector("input");
-        done.push({ text: cb.nextSibling.textContent, done: true });
-      });
-      localStorage.setItem("todos", JSON.stringify(todos));
-      localStorage.setItem("done", JSON.stringify(done));
-    }
-
-    function addTodo() {
-      if (input.value.trim() === "") return;
-      var todos = JSON.parse(localStorage.getItem("todos") || "[]");
-      todos.push({ text: input.value.trim(), done: false });
-      localStorage.setItem("todos", JSON.stringify(todos));
-      input.value = "";
-      loadTodos();
-    }
-
-    list.addEventListener("change", e => {
-      if (e.target.checked) {
-        var todos = JSON.parse(localStorage.getItem("todos") || "[]");
-        var done = JSON.parse(localStorage.getItem("done") || "[]");
-        var idx = e.target.dataset.idx;
-        done.push(todos[idx]);
-        todos.splice(idx, 1);
-        localStorage.setItem("todos", JSON.stringify(todos));
-        localStorage.setItem("done", JSON.stringify(done));
-        loadTodos();
-      }
-    });
-
-    clearBtn.onclick = function() {
-      localStorage.setItem("done", JSON.stringify([]));
-      loadTodos();
-    };
-
-    addBtn.onclick = addTodo;
-    input.onchange = addTodo;
-
+    var val = input.value.trim();
+    if (!val) return;
+    var todos = JSON.parse(localStorage.getItem("todos") || "[]");
+    todos.push({text: val});
+    localStorage.setItem("todos", JSON.stringify(todos));
+    input.value = "";
     loadTodos();
-  </script>
+  }
+
+  function markDone(cb) {
+    var idx = parseInt(cb.getAttribute("data-idx"));
+    var todos = JSON.parse(localStorage.getItem("todos") || "[]");
+    var done = JSON.parse(localStorage.getItem("done") || "[]");
+    done.push(todos[idx]);
+    todos.splice(idx, 1);
+    saveTodos(todos, done);
+    loadTodos();
+  }
+
+  function unmarkDone(cb) {
+    var idx = parseInt(cb.getAttribute("data-idx"));
+    var todos = JSON.parse(localStorage.getItem("todos") || "[]");
+    var done = JSON.parse(localStorage.getItem("done") || "[]");
+    todos.push(done[idx]);
+    done.splice(idx, 1);
+    saveTodos(todos, done);
+    loadTodos();
+  }
+
+  function clearDone() {
+    saveTodos(JSON.parse(localStorage.getItem("todos") || "[]"), []);
+    loadTodos();
+  }
+
+  loadTodos();
+</script>
+
 </body>
 </html>
