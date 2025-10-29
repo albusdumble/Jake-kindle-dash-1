@@ -14,35 +14,37 @@
       width: 100%;
       height: 100%;
       overflow: hidden;
-      font-size: 14px; /* smaller overall */
+      font-size: 14px;
     }
 
-    /* Fake landscape layout */
+    /* Landscape simulation for Kindle if it ever supports transform */
+    body.rotated {
+      transform: rotate(90deg);
+      transform-origin: left top;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vh;
+      height: 100vw;
+    }
+
     .wrapper {
-      display: flex;
-      flex-direction: row;
-      width: 100vw;
-      height: 100vh;
-      transform-origin: center center;
-      box-sizing: border-box;
-      padding: 4px;
-    }
-
-    .grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       grid-template-rows: 1fr 1fr;
+      gap: 4px;
       width: 100%;
       height: 100%;
-      gap: 4px;
+      padding: 6px;
+      box-sizing: border-box;
     }
 
     .module {
       border: 1px solid black;
       padding: 10px;
+      border-radius: 4px;
       box-sizing: border-box;
       overflow: hidden;
-      border-radius: 4px;
     }
 
     h2 {
@@ -53,7 +55,7 @@
     }
 
     ul {
-      padding-left: 20px;
+      padding-left: 18px;
       margin: 0;
       font-size: 1em;
       line-height: 1.3;
@@ -76,84 +78,85 @@
       width: 70%;
     }
 
-    button#add-todo {
+    button {
       font-size: 1em;
       padding: 3px 6px;
       margin-left: 4px;
     }
 
-    .weather-line {
-      margin: 3px 0;
+    #completed-list {
+      margin-top: 10px;
+      border-top: 1px solid #888;
+      padding-top: 5px;
+      font-size: 0.95em;
     }
 
-    /* On very narrow (portrait) devices like Kindle, simulate landscape */
-    @media screen and (orientation: portrait) {
-      .wrapper {
-        transform: rotate(90deg);
-        transform-origin: left top;
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100vh;
-        height: 100vw;
-      }
-    }
+    .weather-line { margin: 3px 0; }
   </style>
 </head>
 <body>
   <div class="wrapper">
-    <div class="grid">
-      <!-- Calendar -->
-      <div class="module" id="calendar">
-        <h2>📅 Calendar</h2>
-        <ul>
-          <li>Oct 29 – Grocery pickup</li>
-          <li>Oct 30 – Dinner w/ family</li>
-          <li>Oct 31 – Trick or treat 🎃</li>
-          <li>Nov 1 – Church activity</li>
-        </ul>
-      </div>
+    <!-- Calendar -->
+    <div class="module" id="calendar">
+      <h2>📅 Calendar</h2>
+      <ul>
+        <li>Oct 29 – Grocery pickup</li>
+        <li>Oct 30 – Dinner w/ family</li>
+        <li>Oct 31 – Trick or Treat</li>
+        <li>Nov 1 – Church activity</li>
+      </ul>
+    </div>
 
-      <!-- Weather -->
-      <div class="module" id="weather">
-        <h2>🌤 Weather (Melissa, TX)</h2>
-        <div id="weather-content">Loading weather...</div>
-      </div>
+    <!-- Weather -->
+    <div class="module" id="weather">
+      <h2>🌤 Weather (Melissa, TX)</h2>
+      <div id="weather-content">Loading weather...</div>
+    </div>
 
-      <!-- Daily Quote -->
-      <div class="module" id="quote">
-        <h2>💬 Daily Quote</h2>
-        <p id="quote-text">“Do what you can, with what you have, where you are.” — Theodore Roosevelt</p>
-      </div>
+    <!-- Daily Quote -->
+    <div class="module" id="quote">
+      <h2>💬 Daily Quote</h2>
+      <p id="quote-text">“Do what you can, with what you have, where you are.” — Theodore Roosevelt</p>
+    </div>
 
-      <!-- To-Dos -->
-      <div class="module" id="todos">
-        <h2>✅ To-Dos</h2>
-        <ul id="todo-list"></ul>
-        <div>
-          <input id="new-todo" type="text" placeholder="Add task...">
-          <button id="add-todo">Add</button>
-        </div>
+    <!-- To-Dos -->
+    <div class="module" id="todos">
+      <h2>✅ To-Dos</h2>
+      <ul id="todo-list"></ul>
+      <div>
+        <input id="new-todo" type="text" placeholder="Add task...">
+        <button id="add-todo">Add</button>
+      </div>
+      <div id="completed-list">
+        <strong>Completed:</strong>
+        <ul id="done-list"></ul>
+        <button id="clear-done">Clear Completed</button>
       </div>
     </div>
   </div>
 
   <script>
-    // ---- Weather (old-school request for Kindle) ----
+    // --- Rotation test (try inline transform for Kindle)
+    document.body.classList.add("rotated");
+
+    // --- Weather ---
     function updateWeather() {
       var xhr = new XMLHttpRequest();
-      xhr.open("GET", "https://api.open-meteo.com/v1/forecast?latitude=33.285&longitude=-96.5717&current_weather=true&temperature_unit=fahrenheit&windspeed_unit=mph");
+      xhr.open("GET", "https://api.open-meteo.com/v1/forecast?latitude=33.285&longitude=-96.5717&current_weather=true&hourly=temperature_2m,precipitation_probability&temperature_unit=fahrenheit&windspeed_unit=mph");
       xhr.onload = function() {
         if (xhr.status === 200) {
-          try {
-            var data = JSON.parse(xhr.responseText);
-            var w = data.current_weather;
-            document.getElementById("weather-content").innerHTML = 
-              "<div class='weather-line'>Temp: " + w.temperature + "°F</div>" +
-              "<div class='weather-line'>Wind: " + w.windspeed + " mph</div>";
-          } catch(e) {
-            document.getElementById("weather-content").innerText = "Parse error.";
-          }
+          var data = JSON.parse(xhr.responseText);
+          var w = data.current_weather;
+          var temp = Math.round(w.temperature);
+          var wind = Math.round(w.windspeed);
+          var forecast = data.hourly.temperature_2m;
+          var timeIndex = data.hourly.time.findIndex(t => new Date(t) > new Date());
+          var upcomingTemps = forecast.slice(timeIndex, timeIndex + 4);
+          var maxTemp = Math.round(Math.max(...upcomingTemps));
+          var rainProb = data.hourly.precipitation_probability[timeIndex] || 0;
+          document.getElementById("weather-content").innerHTML = `
+            <div class='weather-line'>Now: ${temp}°F, ${wind} mph wind</div>
+            <div class='weather-line'>Forecast: ${maxTemp}°F high, ${rainProb}% rain</div>`;
         } else {
           document.getElementById("weather-content").innerText = "No data.";
         }
@@ -165,29 +168,45 @@
     }
     updateWeather();
 
-    // ---- To-Dos ----
+    // --- To-Dos ---
     var list = document.getElementById("todo-list");
+    var doneList = document.getElementById("done-list");
     var input = document.getElementById("new-todo");
     var addBtn = document.getElementById("add-todo");
+    var clearBtn = document.getElementById("clear-done");
 
     function loadTodos() {
       var todos = JSON.parse(localStorage.getItem("todos") || "[]");
+      var done = JSON.parse(localStorage.getItem("done") || "[]");
       list.innerHTML = "";
-      for (var i = 0; i < todos.length; i++) {
+      doneList.innerHTML = "";
+
+      todos.forEach((t, i) => {
         var li = document.createElement("li");
-        li.innerHTML = "<input type='checkbox' " + (todos[i].done ? "checked" : "") + " data-idx='" + i + "'>" + todos[i].text;
+        li.innerHTML = "<input type='checkbox' data-idx='" + i + "'>" + t.text;
         list.appendChild(li);
-      }
+      });
+
+      done.forEach((t, i) => {
+        var li = document.createElement("li");
+        li.innerHTML = "<input type='checkbox' checked data-idx='" + i + "'>" + t.text;
+        doneList.appendChild(li);
+      });
     }
 
     function saveTodos() {
       var todos = [];
-      var items = list.querySelectorAll("li");
-      for (var i = 0; i < items.length; i++) {
-        var cb = items[i].querySelector("input");
-        todos.push({ text: cb.nextSibling.textContent, done: cb.checked });
-      }
+      var done = [];
+      list.querySelectorAll("li").forEach(li => {
+        var cb = li.querySelector("input");
+        todos.push({ text: cb.nextSibling.textContent, done: false });
+      });
+      doneList.querySelectorAll("li").forEach(li => {
+        var cb = li.querySelector("input");
+        done.push({ text: cb.nextSibling.textContent, done: true });
+      });
       localStorage.setItem("todos", JSON.stringify(todos));
+      localStorage.setItem("done", JSON.stringify(done));
     }
 
     function addTodo() {
@@ -199,9 +218,26 @@
       loadTodos();
     }
 
+    list.addEventListener("change", e => {
+      if (e.target.checked) {
+        var todos = JSON.parse(localStorage.getItem("todos") || "[]");
+        var done = JSON.parse(localStorage.getItem("done") || "[]");
+        var idx = e.target.dataset.idx;
+        done.push(todos[idx]);
+        todos.splice(idx, 1);
+        localStorage.setItem("todos", JSON.stringify(todos));
+        localStorage.setItem("done", JSON.stringify(done));
+        loadTodos();
+      }
+    });
+
+    clearBtn.onclick = function() {
+      localStorage.setItem("done", JSON.stringify([]));
+      loadTodos();
+    };
+
     addBtn.onclick = addTodo;
-    input.onchange = addTodo; // fallback for Kindle keyboard
-    list.onchange = saveTodos;
+    input.onchange = addTodo;
 
     loadTodos();
   </script>
