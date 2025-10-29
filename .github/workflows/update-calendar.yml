@@ -1,0 +1,27 @@
+name: Update Calendar JSON
+
+on:
+  schedule:
+    - cron: '0 * * * *' # every hour
+  workflow_dispatch: # allows manual run
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Fetch ICS and convert to JSON
+        run: |
+          pip install icalendar
+          python fetch_ics.py
+          
+      - name: Commit and push JSON
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add calendar.json
+          git commit -m "Update calendar.json"
+          git push
