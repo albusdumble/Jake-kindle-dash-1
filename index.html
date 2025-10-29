@@ -1,112 +1,103 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Jake's Kindle Dashboard</title>
-  <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      background-color: #fff;
-      color: #000;
-      font-family: Georgia, serif;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      font-size: 14px;
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jake's Kindle Dashboard</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    background-color: #fff;
+    color: #000;
+    font-family: Georgia, serif;
+    font-size: 17.5px; /* 25% bigger than 14px */
+    display: flex;
+    justify-content: center;
+  }
 
-    /* Attempt rotation */
-    body.rotated {
-      transform: rotate(90deg);
-      transform-origin: top left;
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100vh;
-      height: 100vw;
-    }
+  .wrapper {
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: repeat(4, auto);
+    gap: 8px;
+    width: 600px; /* fixed width */
+    padding: 10px;
+    box-sizing: border-box;
+  }
 
-    .wrapper {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      grid-template-rows: 1fr 1fr;
-      gap: 4px;
-      width: 100%;
-      height: 100%;
-      padding: 6px;
-      box-sizing: border-box;
-    }
+  .module {
+    border: 1px solid black;
+    padding: 12px;
+    border-radius: 4px;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
 
-    @media screen and (min-aspect-ratio: 1/1) {
-      .wrapper {
-        grid-template-columns: repeat(4, 1fr);
-        grid-template-rows: 1fr;
-      }
-    }
+  h2 {
+    margin: 0 0 6px 0;
+    font-size: 1.4em;
+    border-bottom: 1px solid #000;
+    padding-bottom: 6px;
+    display: flex;
+    align-items: center;
+  }
 
-    .module {
-      border: 1px solid black;
-      padding: 10px;
-      border-radius: 4px;
-      box-sizing: border-box;
-      overflow: hidden;
-    }
+  h2 svg {
+    width: 24px;
+    height: 24px;
+    margin-right: 6px;
+  }
 
-    h2 {
-      margin: 0 0 4px 0;
-      font-size: 1.1em;
-      border-bottom: 1px solid #000;
-      padding-bottom: 4px;
-    }
+  ul {
+    padding-left: 20px;
+    margin: 0;
+    font-size: 1em;
+    line-height: 1.4;
+  }
 
-    ul {
-      padding-left: 18px;
-      margin: 0;
-      font-size: 1em;
-      line-height: 1.3;
-    }
+  p, li, div {
+    font-size: 1em;
+  }
 
-    p, li, div {
-      font-size: 1em;
-    }
+  #todos input[type="checkbox"] {
+    transform: scale(1.1);
+    margin-right: 6px;
+  }
 
-    #todos input[type="checkbox"] {
-      transform: scale(1.1);
-      margin-right: 6px;
-    }
+  input#new-todo {
+    font-size: 1em;
+    padding: 4px;
+    margin-top: 6px;
+    border: 1px solid #333;
+    width: 70%;
+  }
 
-    input#new-todo {
-      font-size: 1em;
-      padding: 3px;
-      margin-top: 4px;
-      border: 1px solid #333;
-      width: 70%;
-    }
+  button {
+    font-size: 1em;
+    padding: 4px 8px;
+    margin-left: 4px;
+  }
 
-    button {
-      font-size: 1em;
-      padding: 3px 6px;
-      margin-left: 4px;
-    }
+  #completed-list {
+    margin-top: 10px;
+    border-top: 1px solid #888;
+    padding-top: 5px;
+    font-size: 0.95em;
+  }
 
-    #completed-list {
-      margin-top: 10px;
-      border-top: 1px solid #888;
-      padding-top: 5px;
-      font-size: 0.95em;
-    }
-
-    .weather-line { margin: 3px 0; }
-  </style>
+  .weather-line { margin: 3px 0; }
+</style>
 </head>
-<body class="rotated">
+<body>
 
 <div class="wrapper">
   <!-- Calendar -->
   <div class="module" id="calendar">
-    <h2>📅 Calendar</h2>
+    <h2>
+      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" stroke="black" fill="none" stroke-width="2"/><line x1="3" y1="10" x2="21" y2="10" stroke="black"/></svg>
+      Calendar
+    </h2>
     <ul>
       <li>Oct 29 – Grocery pickup</li>
       <li>Oct 30 – Dinner w/ family</li>
@@ -117,19 +108,28 @@
 
   <!-- Weather -->
   <div class="module" id="weather">
-    <h2>🌤 Weather (Melissa, TX)</h2>
+    <h2>
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5" stroke="black" fill="none" stroke-width="2"/></svg>
+      Weather (Melissa, TX)
+    </h2>
     <div id="weather-content">Loading weather...</div>
   </div>
 
   <!-- Daily Quote -->
   <div class="module" id="quote">
-    <h2>💬 Daily Quote</h2>
+    <h2>
+      <svg viewBox="0 0 24 24"><path d="M4 21v-7a5 5 0 0 1 5-5h1v-2h-1a7 7 0 0 0-7 7v7h7v-2H6zM14 21v-7a5 5 0 0 1 5-5h1v-2h-1a7 7 0 0 0-7 7v7h7v-2h-5z"/></svg>
+      Daily Quote
+    </h2>
     <p id="quote-text">“Do what you can, with what you have, where you are.” — Theodore Roosevelt</p>
   </div>
 
   <!-- To-Dos -->
   <div class="module" id="todos">
-    <h2>✅ To-Dos</h2>
+    <h2>
+      <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12" stroke="black" fill="none" stroke-width="2"/></svg>
+      To-Dos
+    </h2>
     <ul id="todo-list"></ul>
     <div>
       <input id="new-todo" type="text" placeholder="Add task...">
@@ -180,56 +180,56 @@
     list.innerHTML = "";
     doneList.innerHTML = "";
 
-    for (var i=0; i<todos.length; i++) {
+    for (var i=0;i<todos.length;i++){
       var li = document.createElement("li");
-      li.innerHTML = "<input type='checkbox' data-idx='"+i+"' onclick='markDone(this)'>" + todos[i].text;
+      li.innerHTML = "<input type='checkbox' data-idx='"+i+"' onclick='markDone(this)'>"+todos[i].text;
       list.appendChild(li);
     }
-    for (var i=0; i<done.length; i++) {
+    for (var i=0;i<done.length;i++){
       var li = document.createElement("li");
-      li.innerHTML = "<input type='checkbox' checked data-idx='"+i+"' onclick='unmarkDone(this)'>" + done[i].text;
+      li.innerHTML = "<input type='checkbox' checked data-idx='"+i+"' onclick='unmarkDone(this)'>"+done[i].text;
       doneList.appendChild(li);
     }
   }
 
-  function saveTodos(todos, done) {
+  function saveTodos(todos, done){
     localStorage.setItem("todos", JSON.stringify(todos));
     localStorage.setItem("done", JSON.stringify(done));
   }
 
-  function addTodo() {
-    var input = document.getElementById("new-todo");
-    var val = input.value.trim();
-    if (!val) return;
-    var todos = JSON.parse(localStorage.getItem("todos") || "[]");
-    todos.push({text: val});
+  function addTodo(){
+    var input=document.getElementById("new-todo");
+    var val=input.value.trim();
+    if(!val) return;
+    var todos=JSON.parse(localStorage.getItem("todos")||"[]");
+    todos.push({text:val});
     localStorage.setItem("todos", JSON.stringify(todos));
-    input.value = "";
+    input.value="";
     loadTodos();
   }
 
-  function markDone(cb) {
-    var idx = parseInt(cb.getAttribute("data-idx"));
-    var todos = JSON.parse(localStorage.getItem("todos") || "[]");
-    var done = JSON.parse(localStorage.getItem("done") || "[]");
+  function markDone(cb){
+    var idx=parseInt(cb.getAttribute("data-idx"));
+    var todos=JSON.parse(localStorage.getItem("todos")||"[]");
+    var done=JSON.parse(localStorage.getItem("done")||"[]");
     done.push(todos[idx]);
-    todos.splice(idx, 1);
-    saveTodos(todos, done);
+    todos.splice(idx,1);
+    saveTodos(todos,done);
     loadTodos();
   }
 
-  function unmarkDone(cb) {
-    var idx = parseInt(cb.getAttribute("data-idx"));
-    var todos = JSON.parse(localStorage.getItem("todos") || "[]");
-    var done = JSON.parse(localStorage.getItem("done") || "[]");
+  function unmarkDone(cb){
+    var idx=parseInt(cb.getAttribute("data-idx"));
+    var todos=JSON.parse(localStorage.getItem("todos")||"[]");
+    var done=JSON.parse(localStorage.getItem("done")||"[]");
     todos.push(done[idx]);
-    done.splice(idx, 1);
-    saveTodos(todos, done);
+    done.splice(idx,1);
+    saveTodos(todos,done);
     loadTodos();
   }
 
-  function clearDone() {
-    saveTodos(JSON.parse(localStorage.getItem("todos") || "[]"), []);
+  function clearDone(){
+    saveTodos(JSON.parse(localStorage.getItem("todos")||"[]"),[]);
     loadTodos();
   }
 
