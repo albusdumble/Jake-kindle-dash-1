@@ -29,53 +29,37 @@ html, body {
 }
 h2 {
   margin: 0 0 6px 0;
-  font-size: 1.15em; /* ~17px */
+  font-size: 1.15em;
   display: flex; align-items: center;
   border-bottom: 1px solid #000;
   padding-bottom: 6px;
 }
 h2 svg { width: 24px; height: 24px; margin-right: 6px; fill:none; stroke:black; stroke-width:2; }
 ul { padding-left: 20px; margin:0; line-height:1.4; }
+.weather-line { margin:3px 0; display:flex; align-items:center; }
+.weather-line svg { width:20px; height:20px; margin-right:6px; fill:none; stroke:black; stroke-width:2; }
 input#new-todo { font-size: 1em; padding:4px; margin-top:6px; border:1px solid #333; width:70%; }
 button { font-size: 1em; padding:4px 8px; margin-left:4px; }
 #completed-list { margin-top:10px; border-top:1px solid #888; padding-top:5px; font-size:0.95em; }
 #todos input[type="checkbox"] { transform:scale(1.1); margin-right:6px; }
-.weather-line { margin:3px 0; display:flex; align-items:center; }
-.weather-line svg { width:20px; height:20px; margin-right:6px; fill:none; stroke:black; stroke-width:2; }
 </style>
 </head>
 <body>
 
 <div class="wrapper">
-
   <!-- Calendar -->
   <div class="module" id="calendar">
     <h2>
       <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
       Calendar
     </h2>
-    <ul><li>Loading...</li></ul>
+    <ul id="calendar-list"><li>Loading calendar...</li></ul>
   </div>
 
   <!-- Weather -->
   <div class="module" id="weather">
     <h2>
-      <svg viewBox="0 0 96 96" id="weather-icon">
-        <g id="Dibujo">
-          <path d="M62.142,35.858c0.512,0,1.024-0.195,1.414-0.586l2.829-2.829c0.781-0.781,0.781-2.047,0-2.828
-          c-0.781-0.781-2.048-0.781-2.828,0l-2.829,2.829c-0.781,0.781-0.781,2.047,0,2.828C61.118,35.663,61.63,35.858,62.142,35.858z
-           M30,48c0-1.104-0.896-2-2-2h-4c-1.104,0-2,0.896-2,2s0.896,2,2,2h4C29.104,50,30,49.104,30,48z M32.444,60.728l-2.829,2.829
-          c-0.781,0.781-0.781,2.047,0,2.828c0.39,0.391,0.902,0.586,1.414,0.586c0.512,0,1.024-0.195,1.414-0.586l2.829-2.829
-          c0.781-0.781,0.781-2.047,0-2.828C34.492,59.947,33.224,59.947,32.444,60.728z M32.444,35.272c0.39,0.391,0.902,0.586,1.414,0.586
-          s1.024-0.195,1.414-0.586c0.781-0.781,0.781-2.047,0-2.828l-2.829-2.829c-0.78-0.781-2.048-0.781-2.828,0
-          c-0.781,0.781-0.781,2.047,0,2.828L32.444,35.272z M48,30c1.104,0,2-0.896,2-2v-4c0-1.104-0.896-2-2-2s-2,0.896-2,2v4
-          C46,29.104,46.896,30,48,30z M72,46h-4c-1.104,0-2,0.896-2,2s0.896,2,2,2h4c1.104,0,2-0.896,2-2S73.104,46,72,46z M63.556,60.728
-          c-0.78-0.781-2.048-0.781-2.828,0c-0.781,0.781-0.781,2.047,0,2.828l2.829,2.829c0.39,0.391,0.902,0.586,1.414,0.586
-          c0.512,0,1.023-0.195,1.414-0.586c0.781-0.781,0.781-2.047,0-2.828L63.556,60.728z M48,66c-1.104,0-2,0.896-2,2v4
-          c0,1.104,0.896,2,2,2s2-0.896,2-2v-4C50,66.896,49.104,66,48,66z M48,34c-7.72,0-14,6.28-14,14s6.28,14,14,14s14-6.28,14-14
-          S55.72,34,48,34z M48,58c-5.514,0-10-4.486-10-10s4.486-10,10-10s10,4.486,10,10S53.514,58,48,58z"/>
-        </g>
-      </svg>
+      <svg id="weather-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/></svg>
       Weather
     </h2>
     <div id="weather-content">Loading weather...</div>
@@ -87,7 +71,7 @@ button { font-size: 1em; padding:4px 8px; margin-left:4px; }
       <svg viewBox="0 0 24 24"><path d="M4 21v-7a5 5 0 0 1 5-5h1v-2h-1a7 7 0 0 0-7 7v7h7v-2H6zM14 21v-7a5 5 0 0 1 5-5h1v-2h-1a7 7 0 0 0-7 7v7h7v-2h-5z"/></svg>
       Daily Quote
     </h2>
-    <p id="quote-text">“Do what you can, with what you have, where you are.” — Theodore Roosevelt</p>
+    <p id="quote-text">Loading quote...</p>
   </div>
 
   <!-- To-Dos -->
@@ -110,60 +94,79 @@ button { font-size: 1em; padding:4px 8px; margin-left:4px; }
 </div>
 
 <script>
-// ---- Calendar from JSON ----
+// -------- Calendar --------
 fetch('calendar.json')
   .then(res => res.json())
   .then(events => {
-    const ul = document.querySelector("#calendar ul");
-    ul.innerHTML = "";
-    if(events.length === 0){
-      ul.innerHTML = "<li>No upcoming events</li>";
+    const ul = document.getElementById('calendar-list');
+    ul.innerHTML = '';
+    if (!events || events.length === 0) {
+      ul.innerHTML = '<li>No upcoming events</li>';
       return;
     }
-    events.forEach(e => {
-      const li = document.createElement("li");
-      li.textContent = new Date(e.date).toLocaleDateString()+" – "+e.summary;
+    events.forEach(ev => {
+      const date = new Date(ev.date);
+      const options = { month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' };
+      const dateStr = date.toLocaleString('en-US', options).replace(',', '');
+      const li = document.createElement('li');
+      li.textContent = `${dateStr} – ${ev.summary}`;
       ul.appendChild(li);
     });
   })
-  .catch(err => {
-    document.querySelector("#calendar ul").innerHTML = "<li>Offline / error</li>";
-    console.error(err);
+  .catch(() => {
+    document.getElementById('calendar-list').innerHTML = '<li>Offline or calendar unavailable.</li>';
   });
 
-// ---- Weather ----
+// -------- Weather --------
 function updateWeather() {
-  const xhr = new XMLHttpRequest();
-  xhr.open("GET","https://api.open-meteo.com/v1/forecast?latitude=33.285&longitude=-96.5717&current_weather=true&daily=temperature_2m_max,precipitation_probability_max&temperature_unit=fahrenheit&windspeed_unit=mph&timezone=auto");
-  xhr.onload=function(){
-    if(xhr.status===200){
-      try{
-        const data=JSON.parse(xhr.responseText);
-        const current=data.current_weather;
-        const tempNow=Math.round(current.temperature);
-        const wind=Math.round(current.windspeed);
-        const tomorrowTemp=Math.round(data.daily.temperature_2m_max[1]);
-        const rain=data.daily.precipitation_probability_max[1]||0;
+  fetch("https://api.open-meteo.com/v1/forecast?latitude=33.285&longitude=-96.5717&current_weather=true&daily=weathercode,temperature_2m_max,precipitation_probability_max&temperature_unit=fahrenheit&windspeed_unit=mph&timezone=auto")
+  .then(res => res.json())
+  .then(data => {
+    const current = data.current_weather;
+    const tomorrowCode = data.daily.weathercode[1];
+    const tomorrowTemp = Math.round(data.daily.temperature_2m_max[1]);
+    const wind = Math.round(current.windspeed);
+    const tempNow = Math.round(current.temperature);
 
-        // Icon
-        let iconSvg="";
-        if(rain>30) iconSvg="<svg viewBox='0 0 24 24'><line x1='6' y1='19' x2='6' y2='21'/><line x1='10' y1='19' x2='10' y2='21'/><line x1='14' y1='19' x2='14' y2='21'/><line x1='18' y1='19' x2='18' y2='21'/><ellipse cx='12' cy='12' rx='6' ry='4'/></svg>";
-        else iconSvg="<svg viewBox='0 0 24 24'><circle cx='12' cy='12' r='5'/></svg>";
-        document.getElementById("weather-icon").outerHTML=iconSvg;
+    // Icon logic
+    function getIcon(code) {
+      if ([0].includes(code)) return "<circle cx='12' cy='12' r='5'/>"; // Clear
+      if ([1,2,3].includes(code)) return "<path d='M5 15a7 7 0 0 1 14 0H5z'/>"; // Cloudy
+      if ([51,61,63,80,81,82].includes(code)) return "<path d='M4 15h16M8 19l1 2m4-2l1 2m4-2l1 2'/>"; // Rain
+      if ([95,96,99].includes(code)) return "<path d='M6 13l6-6 6 6M12 7v10'/>"; // Thunder
+      return "<circle cx='12' cy='12' r='5'/>"; // Default sun
+    }
 
-        let html="";
-        html+="<div class='weather-line'>Now: "+tempNow+"°F, "+wind+" mph wind</div>";
-        html+="<div class='weather-line'>Tomorrow: "+tomorrowTemp+"°F"+(rain>0?", "+rain+"% rain":"")+"</div>";
-        document.getElementById("weather-content").innerHTML=html;
-      } catch(e){ document.getElementById("weather-content").innerText="Error parsing weather."; }
-    } else { document.getElementById("weather-content").innerText="No data."; }
-  };
-  xhr.onerror=function(){ document.getElementById("weather-content").innerText="Offline."; }
-  xhr.send();
+    document.getElementById("weather-icon").outerHTML = `<svg viewBox="0 0 24 24" stroke="black" fill="none" stroke-width="2">${getIcon(tomorrowCode)}</svg>`;
+    document.getElementById("weather-content").innerHTML =
+      `<div class='weather-line'>Now: ${tempNow}°F, ${wind} mph wind</div>
+       <div class='weather-line'>Tomorrow: ${tomorrowTemp}°F</div>`;
+  })
+  .catch(() => {
+    document.getElementById("weather-content").innerText = "Offline.";
+  });
 }
 updateWeather();
 
-// ---- To-Dos ----
+// -------- Daily Quote --------
+const quotes = [
+  "“Do what you can, with what you have, where you are.” — Theodore Roosevelt",
+  "“In the middle of difficulty lies opportunity.” — Albert Einstein",
+  "“Success is not final, failure is not fatal: It is the courage to continue that counts.” — Winston Churchill",
+  "“Keep your face always toward the sunshine—and shadows will fall behind you.” — Walt Whitman",
+  "“The best way out is always through.” — Robert Frost"
+];
+function getQuote() {
+  const today = new Date().toISOString().split('T')[0];
+  const saved = JSON.parse(localStorage.getItem('dailyQuote') || '{}');
+  if (saved.date === today) return saved.quote;
+  const quote = quotes[Math.floor(Math.random() * quotes.length)];
+  localStorage.setItem('dailyQuote', JSON.stringify({ date: today, quote }));
+  return quote;
+}
+document.getElementById('quote-text').innerText = getQuote();
+
+// -------- To-Dos --------
 function loadTodos(){
   const todos=JSON.parse(localStorage.getItem("todos")||"[]");
   const done=JSON.parse(localStorage.getItem("done")||"[]");
