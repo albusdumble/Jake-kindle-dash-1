@@ -8,7 +8,7 @@
   html, body {
     margin: 0;
     padding: 0;
-    background-color: #fff;
+    background: #fff;
     color: #000;
     font-family: Georgia, serif;
     font-size: 20px;
@@ -20,27 +20,26 @@
     display: grid;
     grid-template-columns: 1fr;
     grid-template-rows: repeat(4, auto);
-    gap: 8px;
+    gap: 10px;
     width: 600px;
-    padding: 10px;
+    padding: 12px;
     box-sizing: border-box;
   }
 
   .module {
     border: 1px solid black;
+    border-radius: 6px;
     padding: 12px;
-    border-radius: 4px;
-    box-sizing: border-box;
     overflow: hidden;
   }
 
   h2 {
     margin: 0 0 6px 0;
-    font-size: 1.15em; /* header slightly smaller */
-    border-bottom: 1px solid #000;
-    padding-bottom: 6px;
+    font-size: 1.15em;
     display: flex;
     align-items: center;
+    border-bottom: 1px solid #000;
+    padding-bottom: 6px;
   }
 
   h2 svg {
@@ -57,15 +56,6 @@
     margin: 0;
     font-size: 1em;
     line-height: 1.4;
-  }
-
-  p, li, div {
-    font-size: 1em;
-  }
-
-  #todos input[type="checkbox"] {
-    transform: scale(1.1);
-    margin-right: 6px;
   }
 
   input#new-todo {
@@ -87,6 +77,11 @@
     border-top: 1px solid #888;
     padding-top: 5px;
     font-size: 0.95em;
+  }
+
+  #todos input[type="checkbox"] {
+    transform: scale(1.1);
+    margin-right: 6px;
   }
 
   .weather-line { margin: 3px 0; }
@@ -144,36 +139,42 @@
 </div>
 
 <script>
-  // --- Calendar using CORS proxy ---
-  var icsUrl = "https://p157-caldav.icloud.com/published/2/MjAzMDk4MjAyNTcyMDMwOWelqCDmoGrZl0HbDRwh4THxwVTjex_ugi0QuWfxMzqeyjBGGFltleGeYl57ChEM7SaryzOAF7EjZcsTepi0Pwg";
-  var proxyUrl = "https://api.allorigins.win/get?url=" + encodeURIComponent(icsUrl);
+  // -------- Calendar via CORS proxy --------
+  const icsUrl = "https://p157-caldav.icloud.com/published/2/MjAzMDk4MjAyNTcyMDMwOWelqCDmoGrZl0HbDRwh4THxwVTjex_ugi0QuWfxMzqeyjBGGFltleGeYl57ChEM7SaryzOAF7EjZcsTepi0Pwg";
+  const proxyUrl = "https://api.allorigins.win/get?url=" + encodeURIComponent(icsUrl);
 
   function fetchCalendar() {
-    var xhr = new XMLHttpRequest();
+    const xhr = new XMLHttpRequest();
     xhr.open("GET", proxyUrl);
     xhr.onload = function() {
-      if(xhr.status===200){
-        var icsText = JSON.parse(xhr.responseText).contents;
-        var events = parseICS(icsText);
-        displayNextEvents(events, 4);
+      if(xhr.status === 200){
+        try {
+          const icsText = JSON.parse(xhr.responseText).contents;
+          const events = parseICS(icsText);
+          displayNextEvents(events,4);
+        } catch(e) {
+          document.querySelector("#calendar ul").innerHTML="<li>Error parsing calendar.</li>";
+        }
       } else {
-        document.querySelector("#calendar ul").innerHTML = "<li>Unable to load calendar.</li>";
+        document.querySelector("#calendar ul").innerHTML="<li>Unable to load calendar.</li>";
       }
     };
     xhr.onerror = function() {
-      document.querySelector("#calendar ul").innerHTML = "<li>Offline.</li>";
+      document.querySelector("#calendar ul").innerHTML="<li>Offline.</li>";
     };
     xhr.send();
   }
 
-  function parseICS(icsText){
-    var events=[], lines=icsText.split(/\r?\n/), current={};
+  function parseICS(icsText) {
+    const events = [];
+    const lines = icsText.split(/\r?\n/);
+    let current={};
     lines.forEach(line=>{
       if(line.startsWith("BEGIN:VEVENT")) current={};
       if(line.startsWith("SUMMARY:")) current.summary=line.replace("SUMMARY:","");
-      if(line.startsWith("DTSTART")){
-        var dt=line.split(":")[1];
-        current.date=new Date(dt.slice(0,4)+'-'+dt.slice(4,6)+'-'+dt.slice(6,8)+'T'+dt.slice(9,11)+':'+dt.slice(11,13));
+      if(line.startsWith("DTSTART")) {
+        const dt=line.split(":")[1];
+        current.date=new Date(dt.slice(0,4)+'-'+dt.slice(4,6)+'-'+dt.slice(6,8));
       }
       if(line.startsWith("END:VEVENT") && current.date && current.summary) events.push(current);
     });
@@ -181,62 +182,62 @@
   }
 
   function displayNextEvents(events,count){
-    var now=new Date();
-    var upcoming=events.filter(e=>e.date>=now).slice(0,count);
-    var ul=document.querySelector("#calendar ul"); ul.innerHTML="";
+    const now = new Date();
+    const upcoming = events.filter(e=>e.date>=now).slice(0,count);
+    const ul = document.querySelector("#calendar ul");
+    ul.innerHTML = "";
+    if(upcoming.length===0){ ul.innerHTML="<li>No upcoming events</li>"; return; }
     upcoming.forEach(ev=>{
-      var li=document.createElement("li");
-      li.textContent=ev.date.toLocaleDateString()+" – "+ev.summary;
+      const li = document.createElement("li");
+      li.textContent = ev.date.toLocaleDateString()+" – "+ev.summary;
       ul.appendChild(li);
     });
   }
 
   fetchCalendar();
 
-  // --- Weather ---
-  function updateWeather(){
-    var xhr=new XMLHttpRequest();
+  // -------- Weather --------
+  function updateWeather() {
+    const xhr = new XMLHttpRequest();
     xhr.open("GET","https://api.open-meteo.com/v1/forecast?latitude=33.285&longitude=-96.5717&current_weather=true&daily=temperature_2m_max,precipitation_probability_max&temperature_unit=fahrenheit&windspeed_unit=mph&timezone=auto");
     xhr.onload=function(){
       if(xhr.status===200){
         try{
-          var data=JSON.parse(xhr.responseText);
-          var current=data.current_weather;
-          var tempNow=Math.round(current.temperature);
-          var wind=Math.round(current.windspeed);
-          var tomorrowTemp=Math.round(data.daily.temperature_2m_max[1]);
-          var rain=data.daily.precipitation_probability_max[1]||0;
-          var html="";
+          const data=JSON.parse(xhr.responseText);
+          const current=data.current_weather;
+          const tempNow=Math.round(current.temperature);
+          const wind=Math.round(current.windspeed);
+          const tomorrowTemp=Math.round(data.daily.temperature_2m_max[1]);
+          const rain=data.daily.precipitation_probability_max[1]||0;
+          let html="";
           html+="<div class='weather-line'>Now: "+tempNow+"°F, "+wind+" mph wind</div>";
           html+="<div class='weather-line'>Tomorrow: "+tomorrowTemp+"°F"+(rain>0?", "+rain+"% rain":"")+"</div>";
           document.getElementById("weather-content").innerHTML=html;
-        }catch(e){
-          document.getElementById("weather-content").innerText="Error parsing weather.";
-        }
+        } catch(e) { document.getElementById("weather-content").innerText="Error parsing weather."; }
       } else { document.getElementById("weather-content").innerText="No data."; }
     };
-    xhr.onerror=function(){document.getElementById("weather-content").innerText="Offline.";}
+    xhr.onerror=function(){ document.getElementById("weather-content").innerText="Offline."; }
     xhr.send();
   }
   updateWeather();
 
-  // --- To-Dos ---
+  // -------- To-Dos --------
   function loadTodos(){
-    var todos=JSON.parse(localStorage.getItem("todos")||"[]");
-    var done=JSON.parse(localStorage.getItem("done")||"[]");
-    var list=document.getElementById("todo-list");
-    var doneList=document.getElementById("done-list");
+    const todos=JSON.parse(localStorage.getItem("todos")||"[]");
+    const done=JSON.parse(localStorage.getItem("done")||"[]");
+    const list=document.getElementById("todo-list");
+    const doneList=document.getElementById("done-list");
     list.innerHTML=""; doneList.innerHTML="";
-    for(var i=0;i<todos.length;i++){
-      var li=document.createElement("li");
-      li.innerHTML="<input type='checkbox' data-idx='"+i+"' onclick='markDone(this)'>"+todos[i].text;
+    todos.forEach((t,i)=>{
+      const li=document.createElement("li");
+      li.innerHTML="<input type='checkbox' data-idx='"+i+"' onclick='markDone(this)'>"+t.text;
       list.appendChild(li);
-    }
-    for(var i=0;i<done.length;i++){
-      var li=document.createElement("li");
-      li.innerHTML="<input type='checkbox' checked data-idx='"+i+"' onclick='unmarkDone(this)'>"+done[i].text;
+    });
+    done.forEach((t,i)=>{
+      const li=document.createElement("li");
+      li.innerHTML="<input type='checkbox' checked data-idx='"+i+"' onclick='unmarkDone(this)'>"+t.text;
       doneList.appendChild(li);
-    }
+    });
   }
 
   function saveTodos(todos,done){
@@ -245,23 +246,32 @@
   }
 
   function addTodo(){
-    var input=document.getElementById("new-todo"); var val=input.value.trim(); if(!val) return;
-    var todos=JSON.parse(localStorage.getItem("todos")||"[]"); todos.push({text:val});
-    localStorage.setItem("todos",JSON.stringify(todos)); input.value=""; loadTodos();
+    const input=document.getElementById("new-todo");
+    const val=input.value.trim();
+    if(!val) return;
+    const todos=JSON.parse(localStorage.getItem("todos")||"[]");
+    todos.push({text:val});
+    saveTodos(todos,JSON.parse(localStorage.getItem("done")||"[]"));
+    input.value="";
+    loadTodos();
   }
 
   function markDone(cb){
-    var idx=parseInt(cb.getAttribute("data-idx"));
-    var todos=JSON.parse(localStorage.getItem("todos")||"[]");
-    var done=JSON.parse(localStorage.getItem("done")||"[]");
-    done.push(todos[idx]); todos.splice(idx,1); saveTodos(todos,done); loadTodos();
+    const idx=parseInt(cb.getAttribute("data-idx"));
+    const todos=JSON.parse(localStorage.getItem("todos")||"[]");
+    const done=JSON.parse(localStorage.getItem("done")||"[]");
+    done.push(todos[idx]); todos.splice(idx,1);
+    saveTodos(todos,done);
+    loadTodos();
   }
 
   function unmarkDone(cb){
-    var idx=parseInt(cb.getAttribute("data-idx"));
-    var todos=JSON.parse(localStorage.getItem("todos")||"[]");
-    var done=JSON.parse(localStorage.getItem("done")||"[]");
-    todos.push(done[idx]); done.splice(idx,1); saveTodos(todos,done); loadTodos();
+    const idx=parseInt(cb.getAttribute("data-idx"));
+    const todos=JSON.parse(localStorage.getItem("todos")||"[]");
+    const done=JSON.parse(localStorage.getItem("done")||"[]");
+    todos.push(done[idx]); done.splice(idx,1);
+    saveTodos(todos,done);
+    loadTodos();
   }
 
   function clearDone(){
