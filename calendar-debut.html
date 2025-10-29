@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Calendar Debug</title>
+</head>
+<body>
+  <h1>Calendar Debug Test</h1>
+  <div id="calendar-module">
+    <h2>Calendar</h2>
+    <ul id="calendar"></ul>
+  </div>
+
+  <script>
+    // =========================
+    // STEP 1: Fetch ICS
+    // =========================
+    const icsUrl = "https://p157-caldav.icloud.com/published/2/MjAzMDk4MjAyNTcyMDMwOWelqCDmoGrZl0HbDRwh4THxwVTjex_ugi0QuWfxMzqeyjBGGFltleGeYl57ChEM7SaryzOAF7EjZcsTepi0Pwg";
+    const proxyUrl = "https://api.allorigins.win/get?url=" + encodeURIComponent(icsUrl);
+
+    function fetchCalendarDebug() {
+      const xhr = new XMLHttpRequest();
+      xhr.open("GET", proxyUrl);
+      xhr.onload = function() {
+        if(xhr.status===200){
+          try{
+            const icsText = JSON.parse(xhr.responseText).contents;
+            console.log("✅ ICS fetched successfully. Length:", icsText.length);
+            parseICSDebug(icsText);
+          } catch(e){
+            console.error("❌ Error parsing ICS response:", e);
+          }
+        } else {
+          console.error("❌ Unable to fetch ICS. Status:", xhr.status);
+        }
+      };
+      xhr.onerror = function() {
+        console.error("❌ Network error fetching ICS.");
+      };
+      xhr.send();
+    }
+
+    fetchCalendarDebug();
+
+    // =========================
+    // STEP 2: Parse ICS
+    // =========================
+    function parseICSDebug(icsText) {
+      const events = [];
+      const unfolded = icsText.replace(/\r?\n /g,''); // unfold continuation lines
+      const lines = unfolded.split(/\r?\n/);
+
+      let currentEvent = {};
+      lines.forEach(line => {
+        if(line.startsWith("BEGIN:VEVENT")) currentEvent = {};
+        if(line.startsWith("SUMMARY:")) currentEvent.summary = line.replace("SUMMARY:","");
+        if(line.startsWith("DTSTART")) {
+          const match = line.match(/DTSTART(?:;TZID=[^:]+)?:([0-9T]+Z?)/);
+          if(match){
+            currentEvent.rawDate = match[1];
+            currentEvent.date = new Date(match[1]);
+          }
+        }
+        if(line.startsWith("END:VEVENT") && currentEvent.date && currentEvent.summary){
+          events.push(currentEvent);
+          console.log("📅 Parsed event:", currentEvent.summary, "| Date:", currentEvent.date, "| Raw:", currentEvent.rawDate);
+        }
+      });
+
+      console.log("✅ Total events parsed:", events.length);
+      displayNextEventsDebug(events, 4);
+    }
+
+    // =========================
+    // STEP 3: Show next 4 upcoming events
+    // =========================
+    function displayNextEventsDebug(events, count){
+      const now = new Date();
+      console.log("⏰ Current date/time:", now);
+
+      const upcoming = events.filter(e=>e.date >= now);
+      console.log("⏩ Upcoming events count:", upcoming.length);
+
+      const ul = document.querySelector("#calendar");
+      ul.innerHTML = "";
+      if(upcoming.length===0){ 
+        ul.innerHTML="<li>No upcoming events</li>"; 
+        console.warn("⚠️ No upcoming events matched current date/time.");
+        return; 
+      }
+
+      upcoming.slice(0,count).forEach(ev=>{
+        const li = document.createElement("li");
+        li.textContent = ev.date.toLocaleString() + " – " + ev.summary;
+        ul.appendChild(li);
+      });
+    }
+  </script>
+</body>
+</html>
