@@ -17,17 +17,7 @@
       font-size: 14px;
     }
 
-    /* Landscape simulation for Kindle if it ever supports transform */
-    body.rotated {
-      transform: rotate(90deg);
-      transform-origin: left top;
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100vh;
-      height: 100vw;
-    }
-
+    /* Layout that adapts to Kindle orientation */
     .wrapper {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -37,6 +27,14 @@
       height: 100%;
       padding: 6px;
       box-sizing: border-box;
+    }
+
+    @media screen and (min-aspect-ratio: 1/1) {
+      /* Landscape mode: 4 columns */
+      .wrapper {
+        grid-template-columns: repeat(4, 1fr);
+        grid-template-rows: 1fr;
+      }
     }
 
     .module {
@@ -136,27 +134,13 @@
   </div>
 
   <script>
-    // --- Rotation test (try inline transform for Kindle)
-    document.body.classList.add("rotated");
-
-    // --- Weather ---
+    // --- Weather (Kindle-friendly) ---
     function updateWeather() {
       var xhr = new XMLHttpRequest();
-      xhr.open("GET", "https://api.open-meteo.com/v1/forecast?latitude=33.285&longitude=-96.5717&current_weather=true&hourly=temperature_2m,precipitation_probability&temperature_unit=fahrenheit&windspeed_unit=mph");
+      xhr.open("GET", "https://wttr.in/Melissa,Texas?format=3");
       xhr.onload = function() {
         if (xhr.status === 200) {
-          var data = JSON.parse(xhr.responseText);
-          var w = data.current_weather;
-          var temp = Math.round(w.temperature);
-          var wind = Math.round(w.windspeed);
-          var forecast = data.hourly.temperature_2m;
-          var timeIndex = data.hourly.time.findIndex(t => new Date(t) > new Date());
-          var upcomingTemps = forecast.slice(timeIndex, timeIndex + 4);
-          var maxTemp = Math.round(Math.max(...upcomingTemps));
-          var rainProb = data.hourly.precipitation_probability[timeIndex] || 0;
-          document.getElementById("weather-content").innerHTML = `
-            <div class='weather-line'>Now: ${temp}°F, ${wind} mph wind</div>
-            <div class='weather-line'>Forecast: ${maxTemp}°F high, ${rainProb}% rain</div>`;
+          document.getElementById("weather-content").innerText = xhr.responseText;
         } else {
           document.getElementById("weather-content").innerText = "No data.";
         }
