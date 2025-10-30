@@ -26,7 +26,7 @@ for component in cal.walk():
             events.append({"date": start.isoformat(), "summary": summary})
 
 # Sort and limit
-events = sorted(events, key=lambda e: e["date"])[:10]
+events = sorted(events, key=lambda e: e["date"])[:5]
 
 with open("calendar.json", "w") as f:
     json.dump(events, f, indent=2)
