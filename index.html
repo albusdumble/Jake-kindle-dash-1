@@ -13,73 +13,50 @@ html, body {
   display: flex; justify-content: center;
 }
 .wrapper {
-  display: grid;
-  grid-template-columns: 1fr;
-  grid-template-rows: repeat(4, auto);
-  gap: 12px;
   width: 600px;
-  padding: 12px;
+  padding: 10px;
   box-sizing: border-box;
 }
 .module {
-  border: 1px solid black;
+  border: 1px solid #000;
   border-radius: 6px;
-  padding: 12px;
-  overflow: hidden;
+  padding: 10px;
+  margin-bottom: 12px;
 }
 h2 {
-  margin: 0 0 6px 0;
   font-size: 1.15em;
-  display: flex; align-items: center;
+  margin: 0 0 8px 0;
   border-bottom: 1px solid #000;
-  padding-bottom: 6px;
+  padding-bottom: 4px;
 }
-h2 svg { width: 24px; height: 24px; margin-right: 6px; fill:none; stroke:black; stroke-width:2; }
-ul { padding-left: 20px; margin:0; line-height:1.4; }
-.weather-line { margin:3px 0; display:flex; align-items:center; }
-.weather-line svg { width:20px; height:20px; margin-right:6px; fill:none; stroke:black; stroke-width:2; }
-input#new-todo { font-size: 1em; padding:4px; margin-top:6px; border:1px solid #333; width:70%; }
-button { font-size: 1em; padding:4px 8px; margin-left:4px; }
-#completed-list { margin-top:10px; border-top:1px solid #888; padding-top:5px; font-size:0.95em; }
-#todos input[type="checkbox"] { transform:scale(1.1); margin-right:6px; }
+ul { margin: 0; padding-left: 20px; line-height: 1.4; }
+.weather-line { margin: 4px 0; }
+#todos input[type="checkbox"] { margin-right: 6px; }
+#new-todo { width: 70%; font-size: 1em; }
+button { font-size: 1em; padding: 4px 8px; margin-left: 4px; }
+#completed-list { border-top: 1px solid #888; margin-top: 10px; padding-top: 6px; }
 </style>
 </head>
 <body>
 
 <div class="wrapper">
-  <!-- Calendar -->
   <div class="module" id="calendar">
-    <h2>
-      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-      Calendar
-    </h2>
+    <h2>Calendar</h2>
     <ul id="calendar-list"><li>Loading calendar...</li></ul>
   </div>
 
-  <!-- Weather -->
   <div class="module" id="weather">
-    <h2>
-      <svg id="weather-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/></svg>
-      Weather
-    </h2>
+    <h2>Weather</h2>
     <div id="weather-content">Loading weather...</div>
   </div>
 
-  <!-- Daily Quote -->
   <div class="module" id="quote">
-    <h2>
-      <svg viewBox="0 0 24 24"><path d="M4 21v-7a5 5 0 0 1 5-5h1v-2h-1a7 7 0 0 0-7 7v7h7v-2H6zM14 21v-7a5 5 0 0 1 5-5h1v-2h-1a7 7 0 0 0-7 7v7h7v-2h-5z"/></svg>
-      Daily Quote
-    </h2>
+    <h2>Daily Quote</h2>
     <p id="quote-text">Loading quote...</p>
   </div>
 
-  <!-- To-Dos -->
   <div class="module" id="todos">
-    <h2>
-      <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-      To-Dos
-    </h2>
+    <h2>To-Dos</h2>
     <ul id="todo-list"></ul>
     <div>
       <input id="new-todo" type="text" placeholder="Add task...">
@@ -94,130 +71,160 @@ button { font-size: 1em; padding:4px 8px; margin-left:4px; }
 </div>
 
 <script>
-// -------- Calendar --------
-fetch('calendar.json')
-  .then(res => res.json())
-  .then(events => {
-    const ul = document.getElementById('calendar-list');
-    ul.innerHTML = '';
-    if (!events || events.length === 0) {
-      ul.innerHTML = '<li>No upcoming events</li>';
-      return;
+// ---------- Calendar ----------
+function loadCalendar() {
+  var xhr = new XMLHttpRequest();
+  xhr.open("GET", "calendar.json", true);
+  xhr.onreadystatechange = function() {
+    if (xhr.readyState === 4) {
+      var ul = document.getElementById("calendar-list");
+      if (xhr.status === 200) {
+        try {
+          var events = JSON.parse(xhr.responseText);
+          ul.innerHTML = "";
+          if (!events.length) {
+            ul.innerHTML = "<li>No upcoming events</li>";
+            return;
+          }
+          for (var i=0; i<events.length; i++) {
+            var e = events[i];
+            var d = new Date(e.date);
+            var dateStr = formatDate(d);
+            var li = document.createElement("li");
+            li.textContent = dateStr + " – " + e.summary;
+            ul.appendChild(li);
+          }
+        } catch (e) {
+          ul.innerHTML = "<li>Calendar format error.</li>";
+        }
+      } else {
+        ul.innerHTML = "<li>Offline or calendar unavailable.</li>";
+      }
     }
-    events.forEach(ev => {
-      const date = new Date(ev.date);
-      const options = { month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' };
-      const dateStr = date.toLocaleString('en-US', options).replace(',', '');
-      const li = document.createElement('li');
-      li.textContent = `${dateStr} – ${ev.summary}`;
-      ul.appendChild(li);
-    });
-  })
-  .catch(() => {
-    document.getElementById('calendar-list').innerHTML = '<li>Offline or calendar unavailable.</li>';
-  });
-
-// -------- Weather --------
-function updateWeather() {
-  fetch("https://api.open-meteo.com/v1/forecast?latitude=33.285&longitude=-96.5717&current_weather=true&daily=weathercode,temperature_2m_max,precipitation_probability_max&temperature_unit=fahrenheit&windspeed_unit=mph&timezone=auto")
-  .then(res => res.json())
-  .then(data => {
-    const current = data.current_weather;
-    const tomorrowCode = data.daily.weathercode[1];
-    const tomorrowTemp = Math.round(data.daily.temperature_2m_max[1]);
-    const wind = Math.round(current.windspeed);
-    const tempNow = Math.round(current.temperature);
-
-    // Icon logic
-    function getIcon(code) {
-      if ([0].includes(code)) return "<circle cx='12' cy='12' r='5'/>"; // Clear
-      if ([1,2,3].includes(code)) return "<path d='M5 15a7 7 0 0 1 14 0H5z'/>"; // Cloudy
-      if ([51,61,63,80,81,82].includes(code)) return "<path d='M4 15h16M8 19l1 2m4-2l1 2m4-2l1 2'/>"; // Rain
-      if ([95,96,99].includes(code)) return "<path d='M6 13l6-6 6 6M12 7v10'/>"; // Thunder
-      return "<circle cx='12' cy='12' r='5'/>"; // Default sun
-    }
-
-    document.getElementById("weather-icon").outerHTML = `<svg viewBox="0 0 24 24" stroke="black" fill="none" stroke-width="2">${getIcon(tomorrowCode)}</svg>`;
-    document.getElementById("weather-content").innerHTML =
-      `<div class='weather-line'>Now: ${tempNow}°F, ${wind} mph wind</div>
-       <div class='weather-line'>Tomorrow: ${tomorrowTemp}°F</div>`;
-  })
-  .catch(() => {
-    document.getElementById("weather-content").innerText = "Offline.";
-  });
+  };
+  xhr.send();
 }
-updateWeather();
 
-// -------- Daily Quote --------
-const quotes = [
+function formatDate(d) {
+  var months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  var month = months[d.getMonth()];
+  var day = d.getDate();
+  var hours = d.getHours();
+  var minutes = d.getMinutes();
+  var ampm = hours >= 12 ? "PM" : "AM";
+  hours = hours % 12;
+  if (hours === 0) hours = 12;
+  if (minutes < 10) minutes = "0" + minutes;
+  return month + " " + day + " " + hours + ":" + minutes + " " + ampm;
+}
+
+// ---------- Weather ----------
+function loadWeather() {
+  var xhr = new XMLHttpRequest();
+  var url = "https://api.open-meteo.com/v1/forecast?latitude=33.285&longitude=-96.5717&current_weather=true&temperature_unit=fahrenheit&windspeed_unit=mph&timezone=auto";
+  xhr.open("GET", url, true);
+  xhr.onreadystatechange = function() {
+    if (xhr.readyState === 4) {
+      var div = document.getElementById("weather-content");
+      if (xhr.status === 200) {
+        try {
+          var data = JSON.parse(xhr.responseText);
+          var t = Math.round(data.current_weather.temperature);
+          var w = Math.round(data.current_weather.windspeed);
+          div.innerHTML = "Now: " + t + "°F, " + w + " mph wind";
+        } catch (e) {
+          div.innerText = "Weather parse error.";
+        }
+      } else {
+        div.innerText = "Offline.";
+      }
+    }
+  };
+  xhr.send();
+}
+
+// ---------- Daily Quote ----------
+var quotes = [
   "“Do what you can, with what you have, where you are.” — Theodore Roosevelt",
   "“In the middle of difficulty lies opportunity.” — Albert Einstein",
   "“Success is not final, failure is not fatal: It is the courage to continue that counts.” — Winston Churchill",
   "“Keep your face always toward the sunshine—and shadows will fall behind you.” — Walt Whitman",
   "“The best way out is always through.” — Robert Frost"
 ];
-function getQuote() {
-  const today = new Date().toISOString().split('T')[0];
-  const saved = JSON.parse(localStorage.getItem('dailyQuote') || '{}');
-  if (saved.date === today) return saved.quote;
-  const quote = quotes[Math.floor(Math.random() * quotes.length)];
-  localStorage.setItem('dailyQuote', JSON.stringify({ date: today, quote }));
-  return quote;
+function loadQuote() {
+  try {
+    var today = new Date().toISOString().split("T")[0];
+    var saved = JSON.parse(localStorage.getItem("dailyQuote") || "{}");
+    if (saved.date === today) {
+      document.getElementById("quote-text").innerText = saved.quote;
+      return;
+    }
+    var q = quotes[Math.floor(Math.random() * quotes.length)];
+    localStorage.setItem("dailyQuote", JSON.stringify({ date: today, quote: q }));
+    document.getElementById("quote-text").innerText = q;
+  } catch (e) {
+    document.getElementById("quote-text").innerText = quotes[0];
+  }
 }
-document.getElementById('quote-text').innerText = getQuote();
 
-// -------- To-Dos --------
-function loadTodos(){
-  const todos=JSON.parse(localStorage.getItem("todos")||"[]");
-  const done=JSON.parse(localStorage.getItem("done")||"[]");
-  const list=document.getElementById("todo-list");
-  const doneList=document.getElementById("done-list");
-  list.innerHTML=""; doneList.innerHTML="";
-  todos.forEach((t,i)=>{
-    const li=document.createElement("li");
-    li.innerHTML="<input type='checkbox' data-idx='"+i+"' onclick='markDone(this)'>"+t.text;
+// ---------- To-Dos ----------
+function loadTodos() {
+  var todos = JSON.parse(localStorage.getItem("todos") || "[]");
+  var done = JSON.parse(localStorage.getItem("done") || "[]");
+  var list = document.getElementById("todo-list");
+  var doneList = document.getElementById("done-list");
+  list.innerHTML = ""; doneList.innerHTML = "";
+  for (var i=0; i<todos.length; i++) {
+    var li = document.createElement("li");
+    li.innerHTML = "<input type='checkbox' onclick='markDone(" + i + ")'>" + todos[i].text;
     list.appendChild(li);
-  });
-  done.forEach((t,i)=>{
-    const li=document.createElement("li");
-    li.innerHTML="<input type='checkbox' checked data-idx='"+i+"' onclick='unmarkDone(this)'>"+t.text;
-    doneList.appendChild(li);
-  });
+  }
+  for (var j=0; j<done.length; j++) {
+    var li2 = document.createElement("li");
+    li2.innerHTML = "<input type='checkbox' checked onclick='unmarkDone(" + j + ")'>" + done[j].text;
+    doneList.appendChild(li2);
+  }
 }
-function saveTodos(todos,done){
-  localStorage.setItem("todos",JSON.stringify(todos));
-  localStorage.setItem("done",JSON.stringify(done));
+function saveTodos(todos, done) {
+  localStorage.setItem("todos", JSON.stringify(todos));
+  localStorage.setItem("done", JSON.stringify(done));
 }
-function addTodo(){
-  const input=document.getElementById("new-todo");
-  const val=input.value.trim();
-  if(!val) return;
-  const todos=JSON.parse(localStorage.getItem("todos")||"[]");
-  todos.push({text:val});
-  saveTodos(todos,JSON.parse(localStorage.getItem("done")||"[]"));
-  input.value="";
+function addTodo() {
+  var input = document.getElementById("new-todo");
+  var val = input.value.trim();
+  if (!val) return;
+  var todos = JSON.parse(localStorage.getItem("todos") || "[]");
+  todos.push({ text: val });
+  saveTodos(todos, JSON.parse(localStorage.getItem("done") || "[]"));
+  input.value = "";
   loadTodos();
 }
-function markDone(cb){
-  const idx=parseInt(cb.getAttribute("data-idx"));
-  const todos=JSON.parse(localStorage.getItem("todos")||"[]");
-  const done=JSON.parse(localStorage.getItem("done")||"[]");
-  done.push(todos[idx]); todos.splice(idx,1);
-  saveTodos(todos,done);
+function markDone(i) {
+  var todos = JSON.parse(localStorage.getItem("todos") || "[]");
+  var done = JSON.parse(localStorage.getItem("done") || "[]");
+  done.push(todos[i]);
+  todos.splice(i, 1);
+  saveTodos(todos, done);
   loadTodos();
 }
-function unmarkDone(cb){
-  const idx=parseInt(cb.getAttribute("data-idx"));
-  const todos=JSON.parse(localStorage.getItem("todos")||"[]");
-  const done=JSON.parse(localStorage.getItem("done")||"[]");
-  todos.push(done[idx]); done.splice(idx,1);
-  saveTodos(todos,done);
+function unmarkDone(i) {
+  var todos = JSON.parse(localStorage.getItem("todos") || "[]");
+  var done = JSON.parse(localStorage.getItem("done") || "[]");
+  todos.push(done[i]);
+  done.splice(i, 1);
+  saveTodos(todos, done);
   loadTodos();
 }
-function clearDone(){
-  saveTodos(JSON.parse(localStorage.getItem("todos")||"[]"),[]);
+function clearDone() {
+  var todos = JSON.parse(localStorage.getItem("todos") || "[]");
+  saveTodos(todos, []);
   loadTodos();
 }
+
+// ---------- Init ----------
+loadCalendar();
+loadWeather();
+loadQuote();
 loadTodos();
 </script>
 </body>
