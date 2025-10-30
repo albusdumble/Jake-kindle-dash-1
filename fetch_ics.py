@@ -18,9 +18,14 @@ for component in cal.walk():
     if component.name == "VEVENT":
         start = component.get("DTSTART").dt
         summary = str(component.get("SUMMARY"))
+        
         # Normalize date-only to midnight UTC
-        if isinstance(start, date) and not isinstance(start, datetime):
-            start = datetime.combine(start, datetime.min.time()).replace(tzinfo=timezone.utc)
+        if isinstance(start, datetime) and start > now:
+            local_start = start.astimezone(ZoneInfo("America/Chicago"))
+            events.append({
+                "date": local_start.isoformat(),
+                "summary": summary
+            })
         # Only include events today or later
         if start.date() >= today:
             events.append({"date": start.isoformat(), "summary": summary})
