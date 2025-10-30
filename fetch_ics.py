@@ -1,6 +1,6 @@
 import requests
 from icalendar import Calendar
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta, date
 import json
 
 ics_url = "https://p157-caldav.icloud.com/published/2/MjAzMDk4MjAyNTcyMDMwOWelqCDmoGrZl0HbDRwh4THxwVTjex_ugi0QuWfxMzqeyjBGGFltleGeYl57ChEM7SaryzOAF7EjZcsTepi0Pwg"
@@ -10,15 +10,22 @@ response.raise_for_status()
 
 cal = Calendar.from_ical(response.text)
 now = datetime.now(timezone.utc)
+today = date.today()
+
 events = []
 
 for component in cal.walk():
     if component.name == "VEVENT":
         start = component.get("DTSTART").dt
         summary = str(component.get("SUMMARY"))
-        if isinstance(start, datetime) and start > now:
+        # Normalize date-only to midnight UTC
+        if isinstance(start, date) and not isinstance(start, datetime):
+            start = datetime.combine(start, datetime.min.time()).replace(tzinfo=timezone.utc)
+        # Only include events today or later
+        if start.date() >= today:
             events.append({"date": start.isoformat(), "summary": summary})
 
+# Sort and limit
 events = sorted(events, key=lambda e: e["date"])[:10]
 
 with open("calendar.json", "w") as f:
