@@ -5,11 +5,14 @@ on:
     - cron: "0 */6 * * *"  # every 6 hours
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up Python
@@ -18,12 +21,14 @@ jobs:
           python-version: '3.x'
 
       - name: Install dependencies
-        run: pip install requests icalendar
+        run: |
+          pip install requests icalendar
 
       - name: Fetch calendar
         run: python fetch_ics.py
+        working-directory: .
 
-      - name: Commit changes
+      - name: Commit and push changes
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
