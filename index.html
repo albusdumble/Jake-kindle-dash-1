@@ -75,26 +75,34 @@ button { font-size: 1em; padding: 4px 8px; margin-left: 4px; }
 function loadCalendar() {
   var xhr = new XMLHttpRequest();
   xhr.open("GET", "calendar.json", true);
-  xhr.onreadystatechange = function() {
+  xhr.onreadystatechange = function () {
     if (xhr.readyState === 4) {
       var ul = document.getElementById("calendar-list");
       if (xhr.status === 200) {
         try {
           var events = JSON.parse(xhr.responseText);
           ul.innerHTML = "";
+
           if (!events.length) {
             ul.innerHTML = "<li>No upcoming events</li>";
             return;
           }
-          for (var i=0; i<events.length; i++) {
-            var e = events[i];
-            var d = new Date(e.date);
-            var dateStr = formatDate(d);
+
+          // Display each event exactly as stored in the JSON
+          events.forEach(function (eventText) {
+            // Add leading zero to single-digit hour times (03:30 style)
+            eventText = eventText.replace(
+              /(\b\d{1}:\d{2})/,
+              (match) => match.padStart(5, "0")
+            );
+
             var li = document.createElement("li");
-            li.textContent = dateStr + " – " + e.summary;
+            li.textContent = eventText;
+            li.style.fontFamily = "monospace"; // keeps perfect alignment
             ul.appendChild(li);
-          }
+          });
         } catch (e) {
+          console.error("Calendar format error:", e);
           ul.innerHTML = "<li>Calendar format error.</li>";
         }
       } else {
@@ -105,18 +113,6 @@ function loadCalendar() {
   xhr.send();
 }
 
-function formatDate(d) {
-  var months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-  var month = months[d.getMonth()];
-  var day = d.getDate();
-  var hours = d.getHours();
-  var minutes = d.getMinutes();
-  var ampm = hours >= 12 ? "PM" : "AM";
-  hours = hours % 12;
-  if (hours === 0) hours = 12;
-  if (minutes < 10) minutes = "0" + minutes;
-  return month + " " + day + " " + hours + ":" + minutes + " " + ampm;
-}
 
 // ---------- Weather ----------
 function loadWeather() {
