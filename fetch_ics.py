@@ -1,47 +1,40 @@
+from datetime import datetime, date, timedelta
+import icalendar
 import requests
-from icalendar import Calendar
-from datetime import datetime
-from zoneinfo import ZoneInfo
 import json
 
-# ---- SETTINGS ----
-ics_url = "https://p157-caldav.icloud.com/published/2/MjAzMDk4MjAyNTcyMDMwOWelqCDmoGrZl0HbDRwh4THxwVTjex_ugi0QuWfxMzqeyjBGGFltleGeYl57ChEM7SaryzOAF7EjZcsTepi0Pwg"
-local_tz = ZoneInfo("America/Chicago")
+# Fetch and parse ICS file
+url = "YOUR_ICS_URL"
+r = requests.get(url)
+cal = icalendar.Calendar.from_ical(r.text)
 
-# ---- FETCH ----
-response = requests.get(ics_url)
-response.raise_for_status()
-cal = Calendar.from_ical(response.text)
-
-now = datetime.now(local_tz)
-today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-
+today = date.today()
 events = []
 
-# ---- PARSE EVENTS ----
 for component in cal.walk():
     if component.name == "VEVENT":
-        start = component.get("DTSTART").dt
-        summary = str(component.get("SUMMARY"))
+        start = component.get("dtstart").dt
+        summary = str(component.get("summary"))
 
-        # Ensure timezone-aware datetimes
+        # Normalize start to a date
         if isinstance(start, datetime):
-            if start.tzinfo is None:
-                start = start.replace(tzinfo=local_tz)
-            local_start = start.astimezone(local_tz)
+            start_date = start.date()
+        else:
+            start_date = start
 
-            # Only include events today or later
-            if local_start >= today_start:
-                events.append({
-                    "date": local_start.isoformat(),
-                    "summary": summary
-                })
+        # Only show events from today forward
+        if start_date >= today:
+            # Convert to local time if needed
+            if isinstance(start, datetime):
+                start_time = start.strftime("%I:%M %p")
+            else:
+                start_time = ""
 
-# ---- SORT & TRIM ----
-events = sorted(events, key=lambda e: e["date"])[:5]
+            # Add leading zero formatting (already handled by %I)
+            formatted_date = start.strftime("%b %d") if isinstance(start, datetime) else start.strftime("%b %d")
+            events.append(f"{formatted_date} {start_time} - {summary}")
 
-# ---- WRITE OUTPUT ----
+# Sort and save
+events.sort()
 with open("calendar.json", "w") as f:
-    json.dump(events, f, indent=2)
-
-print(f"Wrote {len(events)} upcoming events to calendar.json")
+    json.dump(events[:5], f, indent=2)
