@@ -9,54 +9,63 @@ html, body {
   margin: 0; padding: 0;
   font-family: Georgia, serif;
   background: #fff; color: #000;
-  font-size: 22px;
+  font-size: 20px;
   display: flex; justify-content: center;
 }
 .wrapper {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: repeat(4, auto);
+  gap: 12px;
   width: 600px;
-  padding: 10px;
+  padding: 12px;
   box-sizing: border-box;
 }
 .module {
-  border: 1px solid #000;
+  border: 1px solid black;
   border-radius: 6px;
-  padding: 10px;
-  margin-bottom: 12px;
+  padding: 12px;
+  overflow: hidden;
 }
 h2 {
-  font-size: 1.2em;
-  margin: 0 0 8px 0;
+  margin: 0 0 6px 0;
+  font-size: 1.15em;
+  display: flex; align-items: center;
   border-bottom: 1px solid #000;
-  padding-bottom: 4px;
+  padding-bottom: 6px;
 }
-ul { margin: 0; padding-left: 20px; line-height: 1.4; }
-.weather-line { margin: 4px 0; }
-#todos input[type="checkbox"] { margin-right: 6px; }
-#new-todo { width: 70%; font-size: 1em; }
-button { font-size: 1em; padding: 4px 8px; margin-left: 4px; }
-#completed-list { border-top: 1px solid #888; margin-top: 10px; padding-top: 6px; }
+ul { padding-left: 20px; margin:0; line-height:1.4; }
+button { font-size: 1em; padding:4px 8px; margin-left:4px; }
+input#new-todo { font-size: 1em; padding:4px; margin-top:6px; border:1px solid #333; width:70%; }
+
+#completed-list { margin-top:10px; border-top:1px solid #888; padding-top:5px; font-size:0.95em; }
+#todos input[type="checkbox"] { transform:scale(1.1); margin-right:6px; }
+.mono { font-family: monospace; white-space: pre; }
 </style>
 </head>
 <body>
-
 <div class="wrapper">
+  <!-- Calendar -->
   <div class="module" id="calendar">
-    <h2>Calendar</h2>
+    <h2>📅 Calendar</h2>
     <ul id="calendar-list"><li>Loading calendar...</li></ul>
   </div>
 
+  <!-- Weather -->
   <div class="module" id="weather">
-    <h2>Weather</h2>
+    <h2>🌤️ Weather</h2>
     <div id="weather-content">Loading weather...</div>
   </div>
 
+  <!-- Daily Quote -->
   <div class="module" id="quote">
-    <h2>Daily Quote</h2>
+    <h2>💬 Daily Quote</h2>
     <p id="quote-text">Loading quote...</p>
   </div>
 
+  <!-- To-Dos -->
   <div class="module" id="todos">
-    <h2>To-Dos</h2>
+    <h2>☑️ To-Dos</h2>
     <ul id="todo-list"></ul>
     <div>
       <input id="new-todo" type="text" placeholder="Add task...">
@@ -75,33 +84,37 @@ button { font-size: 1em; padding: 4px 8px; margin-left: 4px; }
 function loadCalendar() {
   var xhr = new XMLHttpRequest();
   xhr.open("GET", "calendar.json", true);
-  xhr.onreadystatechange = function () {
+  xhr.onreadystatechange = function() {
     if (xhr.readyState === 4) {
       var ul = document.getElementById("calendar-list");
       if (xhr.status === 200) {
         try {
           var events = JSON.parse(xhr.responseText);
           ul.innerHTML = "";
-
           if (!events.length) {
             ul.innerHTML = "<li>No upcoming events</li>";
             return;
           }
-
-          // Display each event exactly as stored in the JSON
-          events.forEach(function (eventText) {
-            // Add leading zero to single-digit hour times (03:30 style)
-            eventText = eventText.replace(
-              /(\b\d{1}:\d{2})/,
-              (match) => match.padStart(5, "0")
-            );
-
-            var li = document.createElement("li");
-            li.textContent = eventText;
-            ul.appendChild(li);
-          });
-        } catch (e) {
-          console.error("Calendar format error:", e);
+          for (var i = 0; i < events.length; i++) {
+            var e = events[i];
+            // Handle string-only events
+            if (typeof e === "string") {
+              var li = document.createElement("li");
+              li.className = "mono";
+              li.textContent = e;
+              ul.appendChild(li);
+            }
+            // Handle objects if present
+            else if (e.summary && e.date) {
+              var d = new Date(e.date);
+              var formatted = formatDate(d);
+              var li = document.createElement("li");
+              li.className = "mono";
+              li.textContent = formatted + " - " + e.summary;
+              ul.appendChild(li);
+            }
+          }
+        } catch (err) {
           ul.innerHTML = "<li>Calendar format error.</li>";
         }
       } else {
@@ -112,141 +125,140 @@ function loadCalendar() {
   xhr.send();
 }
 
+function formatDate(d) {
+  var months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  var month = months[d.getMonth()];
+  var day = d.getDate();
+  var hours = d.getHours();
+  var minutes = d.getMinutes();
+  var ampm = hours >= 12 ? "PM" : "AM";
+  hours = hours % 12;
+  if (hours === 0) hours = 12;
+  var hourStr = (hours < 10 ? "0" + hours : hours);
+  var minStr = (minutes < 10 ? "0" + minutes : minutes);
+  return month + " " + (day < 10 ? "0" + day : day) + " " + hourStr + ":" + minStr + " " + ampm;
+}
+loadCalendar();
 
-// ---------- Weather ----------
-function loadWeather() {
+// ---------- Weather (Static fallback if blocked) ----------
+function updateWeather() {
   var xhr = new XMLHttpRequest();
-  var url = "https://api.open-meteo.com/v1/forecast?latitude=33.285&longitude=-96.5717&current_weather=true&temperature_unit=fahrenheit&windspeed_unit=mph&timezone=auto";
-  xhr.open("GET", url, true);
+  xhr.open("GET", "https://api.open-meteo.com/v1/forecast?latitude=33.285&longitude=-96.5717&current_weather=true&temperature_unit=fahrenheit&windspeed_unit=mph&timezone=auto");
   xhr.onreadystatechange = function() {
     if (xhr.readyState === 4) {
-      var div = document.getElementById("weather-content");
+      var el = document.getElementById("weather-content");
       if (xhr.status === 200) {
         try {
           var data = JSON.parse(xhr.responseText);
-          var t = Math.round(data.current_weather.temperature);
-          var w = Math.round(data.current_weather.windspeed);
-          div.innerHTML = "Now: " + t + "°F, " + w + " mph wind";
+          var cur = data.current_weather;
+          el.textContent = "Now: " + Math.round(cur.temperature) + "°F, Wind " + Math.round(cur.windspeed) + " mph";
         } catch (e) {
-          div.innerText = "Weather parse error.";
+          el.textContent = "Weather data unavailable.";
         }
       } else {
-        div.innerText = "Offline.";
+        el.textContent = "Offline or blocked by Kindle.";
       }
     }
   };
   xhr.send();
 }
+updateWeather();
 
 // ---------- Daily Quote ----------
 var quotes = [
-  "“Adam fell that men might be; and men are, that they might have joy.” — 2 Nephi 2:25",
-  "“When ye are in the service of your fellow beings ye are only in the service of your God.” — Mosiah 2:17",
-  "“If ye have faith ye hope for things which are not seen, which are true.” — Alma 32:21",
-  "“By small and simple things are great things brought to pass.” — Alma 37:6",
-  "“Charity is the pure love of Christ, and it endureth forever.” — Moroni 7:47",
   "“I will go and do the things which the Lord hath commanded.” — 1 Nephi 3:7",
+  "“Adam fell that men might be; and men are, that they might have joy.” — 2 Nephi 2:25",
   "“Press forward with a steadfastness in Christ.” — 2 Nephi 31:20",
-  "“Ye shall have hope through the atonement of Christ and the power of his resurrection.” — Moroni 7:41",
+  "“Charity never faileth.” — Moroni 7:46",
+  "“If ye have faith ye hope for things which are not seen.” — Alma 32:21",
+  "“By small and simple things are great things brought to pass.” — Alma 37:6",
+  "“Trust in the Lord forever.” — 2 Nephi 4:34",
+  "“Ye shall have my Spirit to be with you.” — 3 Nephi 18:7",
+  "“Inasmuch as ye shall keep my commandments ye shall prosper.” — 1 Nephi 2:20",
+  "“Counsel with the Lord in all thy doings.” — Alma 37:37",
+  "“Perfect love casteth out all fear.” — Moroni 8:16",
+  "“The Lord is merciful unto all who will, in the sincerity of their hearts, call upon his holy name.” — He. 3:27",
+  "“Feast upon the words of Christ.” — 2 Nephi 32:3",
   "“Come unto Christ, and be perfected in him.” — Moroni 10:32",
-  "“Inasmuch as ye shall keep my commandments ye shall prosper in the land.” — 2 Nephi 1:20",
-  "“The Lord seeth fit to chasten his people; yea, he trieth their patience and their faith.” — Mosiah 23:21",
-  "“If ye will not nourish the word, it will not get root in you.” — Alma 32:38",
-  "“The Lord is merciful unto all who will, in the sincerity of their hearts, call upon his holy name.” — Helaman 3:27",
-  "“Feast upon the words of Christ; for behold, the words of Christ will tell you all things what ye should do.” — 2 Nephi 32:3",
-  "“Behold, my soul delighteth in the things of the Lord.” — 2 Nephi 4:16",
-  "“Counsel with the Lord in all thy doings, and he will direct thee for good.” — Alma 37:37",
-  "“If ye have not charity, ye are nothing.” — Moroni 7:46",
-  "“There is no other name given whereby man can be saved.” — 2 Nephi 31:21",
-  "“Awake, my sons; put on the armor of righteousness.” — 2 Nephi 1:23",
-  "“The natural man is an enemy to God.” — Mosiah 3:19",
-  "“The Spirit of the Lord did not dwell in unholy temples.” — Helaman 4:24",
-  "“Behold, I am a disciple of Jesus Christ, the Son of God.” — 3 Nephi 5:13",
-  "“Wickedness never was happiness.” — Alma 41:10",
-  "“The worth of souls is great in the sight of God.” — D&C 18:10 (Also reflected in Alma 26:37)",
-  "“He inviteth them all to come unto him and partake of his goodness.” — 2 Nephi 26:33",
-  "“They were men of a sound understanding and they had searched the scriptures diligently.” — Alma 17:2",
-  "“I glory in my Jesus, for he hath redeemed my soul from hell.” — 2 Nephi 33:6",
-  "“Faith is things which are hoped for and not seen; wherefore, dispute not because ye see not.” — Ether 12:6",
-  "“Man was created in the image of God.” — Ether 3:15",
-  "“He did speak peace to our souls, and did grant unto us great faith.” — Alma 58:11",
-  "“Behold, I say unto you that the good shepherd doth call you.” — Alma 5:38",
-  "“If men come unto me I will show unto them their weakness.” — Ether 12:27"
+  "“I glory in my Jesus, for he hath redeemed my soul.” — 2 Nephi 33:6",
+  "“When ye are in the service of your fellow beings ye are only in the service of your God.” — Mosiah 2:17",
+  "“If ye love me keep my commandments.” — 3 Nephi 12:19",
+  "“Pray always, and I will pour out my Spirit upon you.” — D&C 19:38",
+  "“This is my work and my glory—to bring to pass the immortality and eternal life of man.” — Moses 1:39",
+  "“Hold fast to the iron rod.” — 1 Nephi 8:30",
+  "“Ye must press forward with a steadfastness in Christ, having a perfect brightness of hope.” — 2 Nephi 31:20",
+  "“If ye will not harden your hearts, and ask me in faith, believing, ye shall receive.” — 1 Nephi 15:11",
+  "“The tender mercies of the Lord are over all those whom he hath chosen.” — 1 Nephi 1:20",
+  "“Man shall not smite, neither shall he judge.” — Mosiah 23:15",
+  "“Live in thanksgiving daily.” — Alma 34:38",
+  "“Lay hold upon every good thing.” — Moroni 7:19",
+  "“I am encircled about eternally in the arms of his love.” — 2 Nephi 1:15",
+  "“Let your hearts rejoice, and be exceedingly glad.” — 3 Nephi 12:12",
+  "“Come unto me all ye ends of the earth.” — 2 Nephi 26:33",
+  "“Behold, I am Jesus Christ, whom the prophets testified shall come into the world.” — 3 Nephi 11:10",
+  "“The Spirit itself maketh intercession for us.” — Moroni 7:26",
+  "“He inviteth all to come unto him.” — 2 Nephi 26:33"
 ];
-function loadQuote() {
-  try {
-    var today = new Date().toISOString().split("T")[0];
-    var saved = JSON.parse(localStorage.getItem("dailyQuote") || "{}");
-    if (saved.date === today) {
-      document.getElementById("quote-text").innerText = saved.quote;
-      return;
-    }
-    var q = quotes[Math.floor(Math.random() * quotes.length)];
-    localStorage.setItem("dailyQuote", JSON.stringify({ date: today, quote: q }));
-    document.getElementById("quote-text").innerText = q;
-  } catch (e) {
-    document.getElementById("quote-text").innerText = quotes[0];
-  }
+function getQuote() {
+  const today = new Date().toISOString().split("T")[0];
+  const saved = JSON.parse(localStorage.getItem("dailyQuote") || "{}");
+  if (saved.date === today) return saved.quote;
+  const quote = quotes[Math.floor(Math.random() * quotes.length)];
+  localStorage.setItem("dailyQuote", JSON.stringify({ date: today, quote }));
+  return quote;
 }
+document.getElementById("quote-text").innerText = getQuote();
 
 // ---------- To-Dos ----------
-function loadTodos() {
-  var todos = JSON.parse(localStorage.getItem("todos") || "[]");
-  var done = JSON.parse(localStorage.getItem("done") || "[]");
-  var list = document.getElementById("todo-list");
-  var doneList = document.getElementById("done-list");
-  list.innerHTML = ""; doneList.innerHTML = "";
-  for (var i=0; i<todos.length; i++) {
-    var li = document.createElement("li");
-    li.innerHTML = "<input type='checkbox' onclick='markDone(" + i + ")'>" + todos[i].text;
+function loadTodos(){
+  const todos=JSON.parse(localStorage.getItem("todos")||"[]");
+  const done=JSON.parse(localStorage.getItem("done")||"[]");
+  const list=document.getElementById("todo-list");
+  const doneList=document.getElementById("done-list");
+  list.innerHTML=""; doneList.innerHTML="";
+  todos.forEach((t,i)=>{
+    const li=document.createElement("li");
+    li.innerHTML="<input type='checkbox' data-idx='"+i+"' onclick='markDone(this)'>"+t.text;
     list.appendChild(li);
-  }
-  for (var j=0; j<done.length; j++) {
-    var li2 = document.createElement("li");
-    li2.innerHTML = "<input type='checkbox' checked onclick='unmarkDone(" + j + ")'>" + done[j].text;
-    doneList.appendChild(li2);
-  }
+  });
+  done.forEach((t,i)=>{
+    const li=document.createElement("li");
+    li.innerHTML="<input type='checkbox' checked data-idx='"+i+"' onclick='unmarkDone(this)'>"+t.text;
+    doneList.appendChild(li);
+  });
 }
-function saveTodos(todos, done) {
-  localStorage.setItem("todos", JSON.stringify(todos));
-  localStorage.setItem("done", JSON.stringify(done));
+function saveTodos(todos,done){
+  localStorage.setItem("todos",JSON.stringify(todos));
+  localStorage.setItem("done",JSON.stringify(done));
 }
-function addTodo() {
-  var input = document.getElementById("new-todo");
-  var val = input.value.trim();
-  if (!val) return;
-  var todos = JSON.parse(localStorage.getItem("todos") || "[]");
-  todos.push({ text: val });
-  saveTodos(todos, JSON.parse(localStorage.getItem("done") || "[]"));
-  input.value = "";
+function addTodo(){
+  const input=document.getElementById("new-todo");
+  const val=input.value.trim();
+  if(!val) return;
+  const todos=JSON.parse(localStorage.getItem("todos")||"[]");
+  todos.push({text:val});
+  saveTodos(todos,JSON.parse(localStorage.getItem("done")||"[]"));
+  input.value="";
   loadTodos();
 }
-function markDone(i) {
-  var todos = JSON.parse(localStorage.getItem("todos") || "[]");
-  var done = JSON.parse(localStorage.getItem("done") || "[]");
-  done.push(todos[i]);
-  todos.splice(i, 1);
-  saveTodos(todos, done);
+function markDone(cb){
+  const idx=parseInt(cb.getAttribute("data-idx"));
+  const todos=JSON.parse(localStorage.getItem("todos")||"[]");
+  const done=JSON.parse(localStorage.getItem("done")||"[]");
+  done.push(todos[idx]); todos.splice(idx,1);
+  saveTodos(todos,done); loadTodos();
+}
+function unmarkDone(cb){
+  const idx=parseInt(cb.getAttribute("data-idx"));
+  const todos=JSON.parse(localStorage.getItem("todos")||"[]");
+  const done=JSON.parse(localStorage.getItem("done")||"[]");
+  todos.push(done[idx]); done.splice(idx,1);
+  saveTodos(todos,done); loadTodos();
+}
+function clearDone(){
+  saveTodos(JSON.parse(localStorage.getItem("todos")||"[]"),[]);
   loadTodos();
 }
-function unmarkDone(i) {
-  var todos = JSON.parse(localStorage.getItem("todos") || "[]");
-  var done = JSON.parse(localStorage.getItem("done") || "[]");
-  todos.push(done[i]);
-  done.splice(i, 1);
-  saveTodos(todos, done);
-  loadTodos();
-}
-function clearDone() {
-  var todos = JSON.parse(localStorage.getItem("todos") || "[]");
-  saveTodos(todos, []);
-  loadTodos();
-}
-
-// ---------- Init ----------
-loadCalendar();
-loadWeather();
-loadQuote();
 loadTodos();
 </script>
 </body>
