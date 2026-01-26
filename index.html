@@ -1,359 +1,167 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Jake's Kindle Dashboard</title>
+
 <style>
 html, body {
-  margin: 0; padding: 0;
+  margin: 0;
+  padding: 0;
   font-family: Georgia, serif;
-  background: #fff; color: #000;
-  font-size: 22px;
-  display: flex; justify-content: center;
+  background: #fff;
+  color: #000;
+
+  /* +25% base font */
+  font-size: 28px;
+
+  display: flex;
+  justify-content: center;
 }
+
+/* Wider layout */
 .wrapper {
-  width: 600px;
-  padding: 10px;
+  width: 750px; /* was 600px */
+  padding: 14px;
   box-sizing: border-box;
 }
+
 .module {
   border: 1px solid #000;
-  border-radius: 6px;
-  padding: 10px;
-  margin-bottom: 12px;
+  border-radius: 8px;
+
+  /* Bigger padding */
+  padding: 14px;
+
+  margin-bottom: 16px;
 }
+
+/* Larger headers */
 h2 {
-  font-size: 1.2em;
-  margin: 0 0 8px 0;
+  font-size: 1.5em; /* was 1.2em */
+  margin: 0 0 10px 0;
   border-bottom: 1px solid #000;
-  padding-bottom: 4px;
+  padding-bottom: 6px;
 }
-ul { margin: 0; padding-left: 20px; line-height: 1.4; }
-#todos input[type="checkbox"] { margin-right: 6px; }
-#new-todo { width: 70%; font-size: 1em; }
-button { font-size: 1em; padding: 4px 8px; margin-left: 4px; }
-#completed-list { border-top: 1px solid #888; margin-top: 10px; padding-top: 6px; }
-.small { font-size: 0.95em; color: #222; }
+
+ul {
+  margin: 0;
+  padding-left: 26px;
+  line-height: 1.5;
+}
+
+.small {
+  font-size: 1.1em;
+  color: #222;
+}
 </style>
 </head>
+
 <body>
+
 <div class="wrapper">
+
+  <!-- Calendar -->
   <div class="module" id="calendar">
     <h2>Calendar</h2>
-    <ul id="calendar-list"><li>Loading calendar...</li></ul>
+    <ul id="calendar-list">
+      <li>Loading calendar...</li>
+    </ul>
   </div>
 
+  <!-- Weather -->
   <div class="module" id="weather">
     <h2>Weather</h2>
     <div id="weather-content">Loading weather...</div>
   </div>
 
+  <!-- Daily Quote -->
   <div class="module" id="quote">
     <h2>Daily Quote</h2>
     <p id="quote-text">Loading quote...</p>
   </div>
 
+
+  <!-- ===============================
+       TO-DOS (DISABLED FOR NOW)
+       ===============================
+
   <div class="module" id="todos">
     <h2>To-Dos</h2>
+
     <ul id="todo-list"></ul>
+
     <div>
       <input id="new-todo" type="text" placeholder="Add task...">
       <button id="add-todo-btn">Add</button>
     </div>
+
     <div id="completed-list">
       <strong>Completed:</strong>
+
       <ul id="done-list"></ul>
-      <button id="clear-done-btn">Clear Completed</button>
+
+      <button id="clear-done-btn">
+        Clear Completed
+      </button>
     </div>
   </div>
+
+  =============================== -->
+
 </div>
 
+
 <script>
+
 /* ========= SAFE, KINDLE-COMPATIBLE DASHBOARD JS (ES5 only) ========= */
 
 /* ---------- Helpers ---------- */
+
 function safeParseJSON(s) {
-  try { return JSON.parse(s); } catch (e) { return null; }
+  try { return JSON.parse(s); }
+  catch (e) { return null; }
 }
+
 function padHourWithZeroIfNeeded(timeStr) {
-  // timeStr example: "3:30" or "12:05" or "3:05 PM" -- we only target leading single-digit hour before colon
-  // Match one or two digits then : then two digits
   var m = timeStr.match(/^(\d{1,2}):(\d{2})/);
   if (!m) return timeStr;
+
   var hh = m[1];
   var mm = m[2];
+
   if (hh.length === 1) hh = '0' + hh;
+
   return hh + ':' + mm + timeStr.slice(m[0].length);
 }
 
-/* ---------- Calendar (reads your existing calendar.json strings) ---------- */
+
+/* ---------- Calendar ---------- */
+
 function loadCalendar() {
+
   try {
+
     var xhr = new XMLHttpRequest();
+
     xhr.open('GET', 'calendar.json', true);
+
     xhr.onreadystatechange = function () {
+
       if (xhr.readyState !== 4) return;
+
       var ul = document.getElementById('calendar-list');
+
       if (xhr.status === 200) {
+
         var events = safeParseJSON(xhr.responseText);
+
         if (!events || !events.length) {
           ul.innerHTML = '<li>No upcoming events</li>';
           return;
         }
+
         ul.innerHTML = '';
-        for (var i = 0; i < events.length; i++) {
-          var item = events[i];
-          // Expecting string like "Oct 31 12:00 PM - Event name"
-          if (typeof item === 'string') {
-            // Try to find first time fragment and zero-pad hour if needed
-            // We'll search for the first " H:MM" pattern after the month/day
-            // Use a regex to find the time portion (e.g., "3:30 PM" or "12:05 AM")
-            var res = item.match(/(\b\d{1,2}:\d{2}\b)/);
-            var outText = item;
-            if (res) {
-              var rawTime = res[1];
-              var padded = padHourWithZeroIfNeeded(rawTime);
-              // Replace only the first occurrence
-              outText = item.replace(rawTime, padded);
-            }
-            var li = document.createElement('li');
-            li.textContent = outText;
-            ul.appendChild(li);
-          } else if (item && item.date && item.summary) {
-            // In case some workflows produce objects {date:..., summary:...}
-            try {
-              var d = new Date(item.date);
-              if (isNaN(d.getTime())) {
-                var li2 = document.createElement('li');
-                li2.textContent = String(item.summary || item);
-                ul.appendChild(li2);
-              } else {
-                var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-                var mo = months[d.getMonth()];
-                var day = d.getDate();
-                var hh = d.getHours() % 12;
-                if (hh === 0) hh = 12;
-                var mm = d.getMinutes();
-                var ampm = (d.getHours() >= 12) ? 'PM' : 'AM';
-                var hhStr = hh < 10 ? '0' + hh : '' + hh;
-                var mmStr = mm < 10 ? '0' + mm : '' + mm;
-                var formatted = mo + ' ' + (day < 10 ? '0' + day : day) + ' ' + hhStr + ':' + mmStr + ' ' + ampm;
-                var li3 = document.createElement('li');
-                li3.textContent = formatted + ' - ' + item.summary;
-                ul.appendChild(li3);
-              }
-            } catch (err) {
-              var li4 = document.createElement('li');
-              li4.textContent = String(item.summary || item);
-              ul.appendChild(li4);
-            }
-          } else {
-            var li5 = document.createElement('li');
-            li5.textContent = String(item);
-            ul.appendChild(li5);
-          }
-        }
-      } else {
-        ul.innerHTML = '<li>Offline or calendar unavailable.</li>';
-      }
-    };
-    xhr.timeout = 8000;
-    xhr.ontimeout = function () {
-      var ul = document.getElementById('calendar-list');
-      ul.innerHTML = '<li>Calendar request timed out.</li>';
-    };
-    xhr.onerror = function () {
-      var ul = document.getElementById('calendar-list');
-      ul.innerHTML = '<li>Error loading calendar.</li>';
-    };
-    xhr.send();
-  } catch (e) {
-    var ul = document.getElementById('calendar-list');
-    ul.innerHTML = '<li>Calendar load failed.</li>';
-  }
-}
 
-/* ---------- Weather (best-effort; failures won't stop page) ---------- */
-function loadWeather() {
-  try {
-    var xhr = new XMLHttpRequest();
-    var url = 'https://api.open-meteo.com/v1/forecast?latitude=33.285&longitude=-96.5717&current_weather=true&temperature_unit=fahrenheit&windspeed_unit=mph&timezone=auto';
-    xhr.open('GET', url, true);
-    xhr.onreadystatechange = function () {
-      if (xhr.readyState !== 4) return;
-      var el = document.getElementById('weather-content');
-      if (xhr.status === 200) {
-        var data = safeParseJSON(xhr.responseText);
-        if (data && data.current_weather) {
-          var cur = data.current_weather;
-          el.textContent = 'Now: ' + Math.round(cur.temperature) + '°F, ' + Math.round(cur.windspeed) + ' mph';
-        } else {
-          el.textContent = 'Weather unavailable.';
-        }
-      } else {
-        // Keep message short to avoid breaking Kindle rendering
-        el.textContent = 'Weather unavailable.';
-      }
-    };
-    xhr.timeout = 8000;
-    xhr.ontimeout = function () {
-      var el = document.getElementById('weather-content');
-      el.textContent = 'Weather timed out.';
-    };
-    xhr.onerror = function () {
-      var el = document.getElementById('weather-content');
-      el.textContent = 'Weather error.';
-    };
-    xhr.send();
-  } catch (e) {
-    var el = document.getElementById('weather-content');
-    el.textContent = 'Weather failed.';
-  }
-}
-
-/* ---------- Quotes (local; guaranteed to work) ---------- */
-var quotes = [
-  "I will go and do the things which the Lord hath commanded. — 1 Nephi 3:7",
-  "Adam fell that men might be; and men are, that they might have joy. — 2 Nephi 2:25",
-  "Press forward with a steadfastness in Christ. — 2 Nephi 31:20",
-  "Charity is the pure love of Christ. — Moroni 7:47",
-  "If ye have faith ye hope for things which are not seen. — Alma 32:21",
-  "By small and simple things are great things brought to pass. — Alma 37:6",
-  "Trust in the Lord forever. — 2 Nephi 4:34",
-  "Ye shall have my Spirit to be with you. — 3 Nephi 18:7",
-  "Inasmuch as ye shall keep my commandments ye shall prosper. — 2 Nephi 1:20",
-  "Counsel with the Lord in all thy doings. — Alma 37:37",
-  "Perfect love casteth out all fear. — Moroni 8:16",
-  "The Lord is merciful unto all who will, in the sincerity of their hearts, call upon his holy name. — Helaman 3:27",
-  "Feast upon the words of Christ. — 2 Nephi 32:3",
-  "Come unto Christ, and be perfected in him. — Moroni 10:32",
-  "I glory in my Jesus, for he hath redeemed my soul. — 2 Nephi 33:6",
-  "When ye are in the service of your fellow beings ye are only in the service of your God. — Mosiah 2:17",
-  "If ye love me keep my commandments. — 3 Nephi 12:19",
-  "Pray always, and I will pour out my Spirit upon you. — D&C 19:38",
-  "This is my work and my glory — to bring to pass the immortality and eternal life of man. — Moses 1:39",
-  "Hold fast to the iron rod. — 1 Nephi 8:30",
-  "Ye must press forward with a steadfastness in Christ, having a perfect brightness of hope. — 2 Nephi 31:20",
-  "If ye will not harden your hearts, and ask me in faith, believing, ye shall receive. — 1 Nephi 15:11",
-  "The tender mercies of the Lord are over all those whom he hath chosen. — 1 Nephi 1:20",
-  "Man shall not smite, neither shall he judge. — Mosiah 23:15",
-  "Live in thanksgiving daily. — Alma 34:38",
-  "Lay hold upon every good thing. — Moroni 7:19",
-  "I am encircled about eternally in the arms of his love. — 2 Nephi 1:15",
-  "Let your hearts rejoice, and be exceedingly glad. — 3 Nephi 12:12",
-  "Come unto me all ye ends of the earth. — 2 Nephi 26:33",
-  "Behold, I am Jesus Christ, whom the prophets testified shall come into the world. — 3 Nephi 11:10",
-  "The Spirit itself maketh intercession for us. — Moroni 7:26",
-  "He inviteth all to come unto him. — 2 Nephi 26:33"
-];
-
-function displayDailyQuote() {
-  try {
-    var todayKey = (new Date()).toISOString().split('T')[0];
-    var saved = safeParseJSON(localStorage.getItem('dailyQuote') || '{}') || {};
-    if (saved.date === todayKey && saved.quote) {
-      document.getElementById('quote-text').innerText = saved.quote;
-      return;
-    }
-    var idx = Math.floor(Math.random() * quotes.length);
-    var q = quotes[idx];
-    try { localStorage.setItem('dailyQuote', JSON.stringify({ date: todayKey, quote: q })); } catch (e) {}
-    document.getElementById('quote-text').innerText = q;
-  } catch (e) {
-    // fallback
-    try { document.getElementById('quote-text').innerText = quotes[0]; } catch (e2) {}
-  }
-}
-
-/* ---------- To-dos (simple, resilient) ---------- */
-function loadTodos() {
-  try {
-    var todos = safeParseJSON(localStorage.getItem('todos') || '[]') || [];
-    var done = safeParseJSON(localStorage.getItem('done') || '[]') || [];
-    var list = document.getElementById('todo-list');
-    var doneList = document.getElementById('done-list');
-    list.innerHTML = ''; doneList.innerHTML = '';
-    for (var i = 0; i < todos.length; i++) {
-      var li = document.createElement('li');
-      li.innerHTML = '<input type="checkbox" onclick="markDoneIndex(' + i + ')"> ' + (todos[i].text || '');
-      list.appendChild(li);
-    }
-    for (var j = 0; j < done.length; j++) {
-      var li2 = document.createElement('li');
-      li2.innerHTML = '<input type="checkbox" checked onclick="unmarkDoneIndex(' + j + ')"> ' + (done[j].text || '');
-      doneList.appendChild(li2);
-    }
-  } catch (e) {
-    // ignore
-  }
-}
-function saveTodos(todos, done) {
-  try {
-    localStorage.setItem('todos', JSON.stringify(todos));
-    localStorage.setItem('done', JSON.stringify(done));
-  } catch (e) {}
-}
-function addTodo() {
-  try {
-    var input = document.getElementById('new-todo');
-    var val = input.value.replace(/^\s+|\s+$/g, '');
-    if (!val) return;
-    var todos = safeParseJSON(localStorage.getItem('todos') || '[]') || [];
-    todos.push({ text: val });
-    saveTodos(todos, safeParseJSON(localStorage.getItem('done') || '[]') || []);
-    input.value = '';
-    loadTodos();
-  } catch (e) {}
-}
-function markDoneIndex(i) {
-  try {
-    var todos = safeParseJSON(localStorage.getItem('todos') || '[]') || [];
-    var done = safeParseJSON(localStorage.getItem('done') || '[]') || [];
-    if (i >= 0 && i < todos.length) {
-      done.push(todos[i]);
-      todos.splice(i, 1);
-      saveTodos(todos, done);
-      loadTodos();
-    }
-  } catch (e) {}
-}
-function unmarkDoneIndex(i) {
-  try {
-    var todos = safeParseJSON(localStorage.getItem('todos') || '[]') || [];
-    var done = safeParseJSON(localStorage.getItem('done') || '[]') || [];
-    if (i >= 0 && i < done.length) {
-      todos.push(done[i]);
-      done.splice(i, 1);
-      saveTodos(todos, done);
-      loadTodos();
-    }
-  } catch (e) {}
-}
-function clearDone() {
-  try {
-    var todos = safeParseJSON(localStorage.getItem('todos') || '[]') || [];
-    saveTodos(todos, []);
-    loadTodos();
-  } catch (e) {}
-}
-
-/* ---------- Wire up buttons (avoid inline handlers) ---------- */
-try {
-  var addBtn = document.getElementById('add-todo-btn');
-  if (addBtn) addBtn.addEventListener('click', addTodo, false);
-} catch (e) {}
-try {
-  var clearBtn = document.getElementById('clear-done-btn');
-  if (clearBtn) clearBtn.addEventListener('click', clearDone, false);
-} catch (e) {}
-
-/* ---------- Init (call things in resilient order) ---------- */
-displayDailyQuote();
-loadCalendar();
-loadWeather();
-loadTodos();
-
-</script>
-</body>
-</html>
+        for (var i = 0; i < events.
