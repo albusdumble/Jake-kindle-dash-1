@@ -12,47 +12,61 @@ html, body {
   font-family: Georgia, serif;
   background: #fff;
   color: #000;
-
-  /* +25% base font */
-  font-size: 28px;
-
+  font-size: 28px; /* was 22px */
   display: flex;
   justify-content: center;
 }
 
-/* Wider layout */
 .wrapper {
-  width: 750px; /* was 600px */
-  padding: 14px;
+  width: 600px; /* unchanged */
+  padding: 10px;
   box-sizing: border-box;
 }
 
 .module {
   border: 1px solid #000;
-  border-radius: 8px;
-
-  /* Bigger padding */
-  padding: 14px;
-
-  margin-bottom: 16px;
+  border-radius: 6px;
+  padding: 10px; /* unchanged */
+  margin-bottom: 12px; /* unchanged */
 }
 
-/* Larger headers */
 h2 {
   font-size: 1.5em; /* was 1.2em */
-  margin: 0 0 10px 0;
+  margin: 0 0 8px 0;
   border-bottom: 1px solid #000;
-  padding-bottom: 6px;
+  padding-bottom: 4px;
 }
 
 ul {
   margin: 0;
-  padding-left: 26px;
-  line-height: 1.5;
+  padding-left: 20px;
+  line-height: 1.6; /* was 1.4 */
+}
+
+#todos input[type="checkbox"] {
+  margin-right: 6px;
+  transform: scale(1.2);
+}
+
+#new-todo {
+  width: 70%;
+  font-size: 1em;
+}
+
+button {
+  font-size: 1em;
+  padding: 4px 8px;
+  margin-left: 4px;
+}
+
+#completed-list {
+  border-top: 1px solid #888;
+  margin-top: 10px;
+  padding-top: 6px;
 }
 
 .small {
-  font-size: 1.1em;
+  font-size: 0.95em;
   color: #222;
 }
 </style>
@@ -62,30 +76,20 @@ ul {
 
 <div class="wrapper">
 
-  <!-- Calendar -->
   <div class="module" id="calendar">
     <h2>Calendar</h2>
-    <ul id="calendar-list">
-      <li>Loading calendar...</li>
-    </ul>
+    <ul id="calendar-list"><li>Loading calendar...</li></ul>
   </div>
 
-  <!-- Weather -->
   <div class="module" id="weather">
     <h2>Weather</h2>
     <div id="weather-content">Loading weather...</div>
   </div>
 
-  <!-- Daily Quote -->
   <div class="module" id="quote">
     <h2>Daily Quote</h2>
     <p id="quote-text">Loading quote...</p>
   </div>
-
-
-  <!-- ===============================
-       TO-DOS (DISABLED FOR NOW)
-       ===============================
 
   <div class="module" id="todos">
     <h2>To-Dos</h2>
@@ -99,16 +103,10 @@ ul {
 
     <div id="completed-list">
       <strong>Completed:</strong>
-
       <ul id="done-list"></ul>
-
-      <button id="clear-done-btn">
-        Clear Completed
-      </button>
+      <button id="clear-done-btn">Clear Completed</button>
     </div>
   </div>
-
-  =============================== -->
 
 </div>
 
@@ -120,19 +118,15 @@ ul {
 /* ---------- Helpers ---------- */
 
 function safeParseJSON(s) {
-  try { return JSON.parse(s); }
-  catch (e) { return null; }
+  try { return JSON.parse(s); } catch (e) { return null; }
 }
 
 function padHourWithZeroIfNeeded(timeStr) {
   var m = timeStr.match(/^(\d{1,2}):(\d{2})/);
   if (!m) return timeStr;
-
   var hh = m[1];
   var mm = m[2];
-
   if (hh.length === 1) hh = '0' + hh;
-
   return hh + ':' + mm + timeStr.slice(m[0].length);
 }
 
@@ -144,7 +138,6 @@ function loadCalendar() {
   try {
 
     var xhr = new XMLHttpRequest();
-
     xhr.open('GET', 'calendar.json', true);
 
     xhr.onreadystatechange = function () {
@@ -175,6 +168,7 @@ function loadCalendar() {
             var outText = item;
 
             if (res) {
+
               var rawTime = res[1];
               var padded = padHourWithZeroIfNeeded(rawTime);
               outText = item.replace(rawTime, padded);
@@ -185,63 +179,15 @@ function loadCalendar() {
             ul.appendChild(li);
           }
 
-          else if (item && item.date && item.summary) {
-
-            try {
-
-              var d = new Date(item.date);
-
-              if (isNaN(d.getTime())) {
-
-                var li2 = document.createElement('li');
-                li2.textContent = String(item.summary || item);
-                ul.appendChild(li2);
-
-              } else {
-
-                var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-
-                var mo = months[d.getMonth()];
-                var day = d.getDate();
-
-                var hh = d.getHours() % 12;
-                if (hh === 0) hh = 12;
-
-                var mm = d.getMinutes();
-
-                var ampm = (d.getHours() >= 12) ? 'PM' : 'AM';
-
-                var hhStr = hh < 10 ? '0' + hh : '' + hh;
-                var mmStr = mm < 10 ? '0' + mm : '' + mm;
-
-                var formatted =
-                  mo + ' ' +
-                  (day < 10 ? '0' + day : day) + ' ' +
-                  hhStr + ':' + mmStr + ' ' + ampm;
-
-                var li3 = document.createElement('li');
-                li3.textContent = formatted + ' - ' + item.summary;
-                ul.appendChild(li3);
-              }
-
-            } catch (err) {
-
-              var li4 = document.createElement('li');
-              li4.textContent = String(item.summary || item);
-              ul.appendChild(li4);
-            }
-          }
-
           else {
 
-            var li5 = document.createElement('li');
-            li5.textContent = String(item);
-            ul.appendChild(li5);
+            var li2 = document.createElement('li');
+            li2.textContent = String(item);
+            ul.appendChild(li2);
           }
         }
 
       } else {
-
         ul.innerHTML = '<li>Offline or calendar unavailable.</li>';
       }
     };
@@ -249,21 +195,21 @@ function loadCalendar() {
     xhr.timeout = 8000;
 
     xhr.ontimeout = function () {
-      document.getElementById('calendar-list').innerHTML =
-        '<li>Calendar timed out.</li>';
+      document.getElementById('calendar-list')
+        .innerHTML = '<li>Calendar request timed out.</li>';
     };
 
     xhr.onerror = function () {
-      document.getElementById('calendar-list').innerHTML =
-        '<li>Calendar error.</li>';
+      document.getElementById('calendar-list')
+        .innerHTML = '<li>Error loading calendar.</li>';
     };
 
     xhr.send();
 
   } catch (e) {
 
-    document.getElementById('calendar-list').innerHTML =
-      '<li>Calendar failed.</li>';
+    document.getElementById('calendar-list')
+      .innerHTML = '<li>Calendar load failed.</li>';
   }
 }
 
@@ -277,11 +223,7 @@ function loadWeather() {
     var xhr = new XMLHttpRequest();
 
     var url =
-      'https://api.open-meteo.com/v1/forecast?' +
-      'latitude=33.285&longitude=-96.5717&' +
-      'current_weather=true&' +
-      'temperature_unit=fahrenheit&' +
-      'windspeed_unit=mph&timezone=auto';
+      'https://api.open-meteo.com/v1/forecast?latitude=33.285&longitude=-96.5717&current_weather=true&temperature_unit=fahrenheit&windspeed_unit=mph&timezone=auto';
 
     xhr.open('GET', url, true);
 
@@ -307,12 +249,10 @@ function loadWeather() {
             ' mph';
 
         } else {
-
           el.textContent = 'Weather unavailable.';
         }
 
       } else {
-
         el.textContent = 'Weather unavailable.';
       }
     };
@@ -320,21 +260,21 @@ function loadWeather() {
     xhr.timeout = 8000;
 
     xhr.ontimeout = function () {
-      document.getElementById('weather-content').textContent =
-        'Weather timed out.';
+      document.getElementById('weather-content')
+        .textContent = 'Weather timed out.';
     };
 
     xhr.onerror = function () {
-      document.getElementById('weather-content').textContent =
-        'Weather error.';
+      document.getElementById('weather-content')
+        .textContent = 'Weather error.';
     };
 
     xhr.send();
 
   } catch (e) {
 
-    document.getElementById('weather-content').textContent =
-      'Weather failed.';
+    document.getElementById('weather-content')
+      .textContent = 'Weather failed.';
   }
 }
 
@@ -343,9 +283,13 @@ function loadWeather() {
 
 var quotes = [
   "I will go and do the things which the Lord hath commanded. — 1 Nephi 3:7",
+  "Adam fell that men might be; and men are, that they might have joy. — 2 Nephi 2:25",
   "Press forward with a steadfastness in Christ. — 2 Nephi 31:20",
   "Charity is the pure love of Christ. — Moroni 7:47",
   "By small and simple things are great things brought to pass. — Alma 37:6",
+  "Trust in the Lord forever. — 2 Nephi 4:34",
+  "Feast upon the words of Christ. — 2 Nephi 32:3",
+  "Come unto Christ, and be perfected in him. — Moroni 10:32",
   "Hold fast to the iron rod. — 1 Nephi 8:30",
   "When ye are in the service of your fellow beings ye are only in the service of your God. — Mosiah 2:17"
 ];
@@ -354,39 +298,181 @@ function displayDailyQuote() {
 
   try {
 
-    var today =
+    var todayKey =
       (new Date()).toISOString().split('T')[0];
 
     var saved =
       safeParseJSON(localStorage.getItem('dailyQuote') || '{}') || {};
 
-    if (saved.date === today && saved.quote) {
+    if (saved.date === todayKey && saved.quote) {
 
-      document.getElementById('quote-text').innerText =
-        saved.quote;
+      document.getElementById('quote-text')
+        .innerText = saved.quote;
 
       return;
     }
 
-    var idx =
-      Math.floor(Math.random() * quotes.length);
-
+    var idx = Math.floor(Math.random() * quotes.length);
     var q = quotes[idx];
 
     try {
       localStorage.setItem(
         'dailyQuote',
-        JSON.stringify({ date: today, quote: q })
+        JSON.stringify({ date: todayKey, quote: q })
       );
     } catch (e) {}
 
-    document.getElementById('quote-text').innerText = q;
+    document.getElementById('quote-text')
+      .innerText = q;
 
   } catch (e) {
 
-    document.getElementById('quote-text').innerText =
-      quotes[0];
+    document.getElementById('quote-text')
+      .innerText = quotes[0];
   }
+}
+
+
+/* ---------- Todos ---------- */
+
+function loadTodos() {
+
+  try {
+
+    var todos =
+      safeParseJSON(localStorage.getItem('todos') || '[]') || [];
+
+    var done =
+      safeParseJSON(localStorage.getItem('done') || '[]') || [];
+
+    var list = document.getElementById('todo-list');
+    var doneList = document.getElementById('done-list');
+
+    list.innerHTML = '';
+    doneList.innerHTML = '';
+
+    for (var i = 0; i < todos.length; i++) {
+
+      var li = document.createElement('li');
+
+      li.innerHTML =
+        '<input type="checkbox" onclick="markDoneIndex(' + i + ')"> ' +
+        (todos[i].text || '');
+
+      list.appendChild(li);
+    }
+
+    for (var j = 0; j < done.length; j++) {
+
+      var li2 = document.createElement('li');
+
+      li2.innerHTML =
+        '<input type="checkbox" checked onclick="unmarkDoneIndex(' + j + ')"> ' +
+        (done[j].text || '');
+
+      doneList.appendChild(li2);
+    }
+
+  } catch (e) {}
+}
+
+
+function saveTodos(todos, done) {
+
+  try {
+
+    localStorage.setItem('todos', JSON.stringify(todos));
+    localStorage.setItem('done', JSON.stringify(done));
+
+  } catch (e) {}
+}
+
+
+function addTodo() {
+
+  try {
+
+    var input = document.getElementById('new-todo');
+
+    var val = input.value.replace(/^\s+|\s+$/g, '');
+
+    if (!val) return;
+
+    var todos =
+      safeParseJSON(localStorage.getItem('todos') || '[]') || [];
+
+    todos.push({ text: val });
+
+    saveTodos(
+      todos,
+      safeParseJSON(localStorage.getItem('done') || '[]') || []
+    );
+
+    input.value = '';
+
+    loadTodos();
+
+  } catch (e) {}
+}
+
+
+function markDoneIndex(i) {
+
+  try {
+
+    var todos =
+      safeParseJSON(localStorage.getItem('todos') || '[]') || [];
+
+    var done =
+      safeParseJSON(localStorage.getItem('done') || '[]') || [];
+
+    if (i >= 0 && i < todos.length) {
+
+      done.push(todos[i]);
+      todos.splice(i, 1);
+
+      saveTodos(todos, done);
+      loadTodos();
+    }
+
+  } catch (e) {}
+}
+
+
+function unmarkDoneIndex(i) {
+
+  try {
+
+    var todos =
+      safeParseJSON(localStorage.getItem('todos') || '[]') || [];
+
+    var done =
+      safeParseJSON(localStorage.getItem('done') || '[]') || [];
+
+    if (i >= 0 && i < done.length) {
+
+      todos.push(done[i]);
+      done.splice(i, 1);
+
+      saveTodos(todos, done);
+      loadTodos();
+    }
+
+  } catch (e) {}
+}
+
+
+function clearDone() {
+
+  try {
+
+    var todos =
+      safeParseJSON(localStorage.getItem('todos') || '[]') || [];
+
+    saveTodos(todos, []);
+    loadTodos();
+
+  } catch (e) {}
 }
 
 
@@ -395,6 +481,7 @@ function displayDailyQuote() {
 displayDailyQuote();
 loadCalendar();
 loadWeather();
+loadTodos();
 
 </script>
 
