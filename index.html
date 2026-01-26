@@ -164,4 +164,239 @@ function loadCalendar() {
 
         ul.innerHTML = '';
 
-        for (var i = 0; i < events.
+        for (var i = 0; i < events.length; i++) {
+
+          var item = events[i];
+
+          if (typeof item === 'string') {
+
+            var res = item.match(/(\b\d{1,2}:\d{2}\b)/);
+
+            var outText = item;
+
+            if (res) {
+              var rawTime = res[1];
+              var padded = padHourWithZeroIfNeeded(rawTime);
+              outText = item.replace(rawTime, padded);
+            }
+
+            var li = document.createElement('li');
+            li.textContent = outText;
+            ul.appendChild(li);
+          }
+
+          else if (item && item.date && item.summary) {
+
+            try {
+
+              var d = new Date(item.date);
+
+              if (isNaN(d.getTime())) {
+
+                var li2 = document.createElement('li');
+                li2.textContent = String(item.summary || item);
+                ul.appendChild(li2);
+
+              } else {
+
+                var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+                var mo = months[d.getMonth()];
+                var day = d.getDate();
+
+                var hh = d.getHours() % 12;
+                if (hh === 0) hh = 12;
+
+                var mm = d.getMinutes();
+
+                var ampm = (d.getHours() >= 12) ? 'PM' : 'AM';
+
+                var hhStr = hh < 10 ? '0' + hh : '' + hh;
+                var mmStr = mm < 10 ? '0' + mm : '' + mm;
+
+                var formatted =
+                  mo + ' ' +
+                  (day < 10 ? '0' + day : day) + ' ' +
+                  hhStr + ':' + mmStr + ' ' + ampm;
+
+                var li3 = document.createElement('li');
+                li3.textContent = formatted + ' - ' + item.summary;
+                ul.appendChild(li3);
+              }
+
+            } catch (err) {
+
+              var li4 = document.createElement('li');
+              li4.textContent = String(item.summary || item);
+              ul.appendChild(li4);
+            }
+          }
+
+          else {
+
+            var li5 = document.createElement('li');
+            li5.textContent = String(item);
+            ul.appendChild(li5);
+          }
+        }
+
+      } else {
+
+        ul.innerHTML = '<li>Offline or calendar unavailable.</li>';
+      }
+    };
+
+    xhr.timeout = 8000;
+
+    xhr.ontimeout = function () {
+      document.getElementById('calendar-list').innerHTML =
+        '<li>Calendar timed out.</li>';
+    };
+
+    xhr.onerror = function () {
+      document.getElementById('calendar-list').innerHTML =
+        '<li>Calendar error.</li>';
+    };
+
+    xhr.send();
+
+  } catch (e) {
+
+    document.getElementById('calendar-list').innerHTML =
+      '<li>Calendar failed.</li>';
+  }
+}
+
+
+/* ---------- Weather ---------- */
+
+function loadWeather() {
+
+  try {
+
+    var xhr = new XMLHttpRequest();
+
+    var url =
+      'https://api.open-meteo.com/v1/forecast?' +
+      'latitude=33.285&longitude=-96.5717&' +
+      'current_weather=true&' +
+      'temperature_unit=fahrenheit&' +
+      'windspeed_unit=mph&timezone=auto';
+
+    xhr.open('GET', url, true);
+
+    xhr.onreadystatechange = function () {
+
+      if (xhr.readyState !== 4) return;
+
+      var el = document.getElementById('weather-content');
+
+      if (xhr.status === 200) {
+
+        var data = safeParseJSON(xhr.responseText);
+
+        if (data && data.current_weather) {
+
+          var cur = data.current_weather;
+
+          el.textContent =
+            'Now: ' +
+            Math.round(cur.temperature) +
+            '°F, ' +
+            Math.round(cur.windspeed) +
+            ' mph';
+
+        } else {
+
+          el.textContent = 'Weather unavailable.';
+        }
+
+      } else {
+
+        el.textContent = 'Weather unavailable.';
+      }
+    };
+
+    xhr.timeout = 8000;
+
+    xhr.ontimeout = function () {
+      document.getElementById('weather-content').textContent =
+        'Weather timed out.';
+    };
+
+    xhr.onerror = function () {
+      document.getElementById('weather-content').textContent =
+        'Weather error.';
+    };
+
+    xhr.send();
+
+  } catch (e) {
+
+    document.getElementById('weather-content').textContent =
+      'Weather failed.';
+  }
+}
+
+
+/* ---------- Quotes ---------- */
+
+var quotes = [
+  "I will go and do the things which the Lord hath commanded. — 1 Nephi 3:7",
+  "Press forward with a steadfastness in Christ. — 2 Nephi 31:20",
+  "Charity is the pure love of Christ. — Moroni 7:47",
+  "By small and simple things are great things brought to pass. — Alma 37:6",
+  "Hold fast to the iron rod. — 1 Nephi 8:30",
+  "When ye are in the service of your fellow beings ye are only in the service of your God. — Mosiah 2:17"
+];
+
+function displayDailyQuote() {
+
+  try {
+
+    var today =
+      (new Date()).toISOString().split('T')[0];
+
+    var saved =
+      safeParseJSON(localStorage.getItem('dailyQuote') || '{}') || {};
+
+    if (saved.date === today && saved.quote) {
+
+      document.getElementById('quote-text').innerText =
+        saved.quote;
+
+      return;
+    }
+
+    var idx =
+      Math.floor(Math.random() * quotes.length);
+
+    var q = quotes[idx];
+
+    try {
+      localStorage.setItem(
+        'dailyQuote',
+        JSON.stringify({ date: today, quote: q })
+      );
+    } catch (e) {}
+
+    document.getElementById('quote-text').innerText = q;
+
+  } catch (e) {
+
+    document.getElementById('quote-text').innerText =
+      quotes[0];
+  }
+}
+
+
+/* ---------- Init ---------- */
+
+displayDailyQuote();
+loadCalendar();
+loadWeather();
+
+</script>
+
+</body>
+</html>
